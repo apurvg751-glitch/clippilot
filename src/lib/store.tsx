@@ -124,6 +124,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // LocalStorage not available or parse error
     }
+
+    // Check live YouTube API status from server
+    fetch('/api/youtube/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.connected && data.channel) {
+          setAccounts((prev) =>
+            prev.map((acc) => {
+              if (acc.platform !== 'youtube') return acc;
+              return {
+                ...acc,
+                isConnected: true,
+                status: 'connected',
+                displayName: data.channel.title || acc.displayName,
+                handle: data.channel.handle || acc.handle,
+                avatarUrl: data.channel.avatarUrl || acc.avatarUrl,
+                followersOrSubscribers: data.channel.subscribersCount ?? acc.followersOrSubscribers,
+                totalViews: data.channel.totalViews ?? acc.totalViews,
+                lastSyncAt: data.channel.lastSync || new Date().toISOString(),
+              };
+            })
+          );
+          setIsDemoMode(false);
+          addToast('success', `Live YouTube Channel Connected: ${data.channel.title}`);
+        }
+      })
+      .catch(() => {
+        // Dev server or offline
+      });
   }, []);
 
   // Save changes to localStorage
