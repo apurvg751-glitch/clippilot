@@ -125,6 +125,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // LocalStorage not available or parse error
     }
 
+    // Check URL parameters for successful OAuth redirect
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('connected') === 'youtube') {
+        const handle = urlParams.get('handle') || '@apurvg-p9m';
+        const title = urlParams.get('title') || 'Apurv G';
+        const subs = Number(urlParams.get('subs')) || 0;
+        const views = Number(urlParams.get('views')) || 0;
+
+        setAccounts((prev) =>
+          prev.map((acc) => {
+            if (acc.platform !== 'youtube') return acc;
+            return {
+              ...acc,
+              isConnected: true,
+              status: 'connected',
+              displayName: title,
+              handle: handle,
+              followersOrSubscribers: subs,
+              totalViews: views,
+              lastSyncAt: new Date().toISOString(),
+            };
+          })
+        );
+        setIsDemoMode(false);
+        setActiveTab('accounts');
+      }
+    }
+
     // Check live YouTube API status from server
     fetch('/api/youtube/status')
       .then((res) => res.json())
