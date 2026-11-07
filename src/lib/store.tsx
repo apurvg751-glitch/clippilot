@@ -46,6 +46,8 @@ interface StoreContextType {
   setIsUploadModalOpen: (open: boolean) => void;
   isIdeaModalOpen: boolean;
   setIsIdeaModalOpen: (open: boolean) => void;
+  isInstallModalOpen: boolean;
+  setIsInstallModalOpen: (open: boolean) => void;
   publishingJob: PublishingJob;
   startPublishing: (
     videoId: string,
@@ -92,6 +94,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [accountToConnect, setAccountToConnect] = useState<SocialAccount | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isIdeaModalOpen, setIsIdeaModalOpen] = useState(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -436,6 +439,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setIsUploadModalOpen,
         isIdeaModalOpen,
         setIsIdeaModalOpen,
+        isInstallModalOpen,
+        setIsInstallModalOpen,
         publishingJob,
         startPublishing,
         cancelPublishing,

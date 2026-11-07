@@ -4,6 +4,16 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ClipPilot — Video Clipping & Multi-Channel Studio",
   description: "Personal video clipping and social media management dashboard for YouTube Shorts, Instagram Reels, and TikTok.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "ClipPilot",
+  },
+  icons: {
+    icon: "/icons/icon.svg",
+    apple: "/icons/icon.svg",
+  },
 };
 
 export default function RootLayout({

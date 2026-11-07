@@ -18,9 +18,10 @@ import { ContentPlannerView } from '@/components/planner/ContentPlannerView';
 import { NewIdeaModal } from '@/components/planner/NewIdeaModal';
 import { SettingsView } from '@/components/settings/SettingsView';
 import { ToastContainer } from '@/components/common/ToastContainer';
+import { InstallAppModal } from '@/components/common/InstallAppModal';
 
 function DashboardContent() {
-  const { activeTab } = useStore();
+  const { activeTab, isInstallModalOpen, setIsInstallModalOpen } = useStore();
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#090c15] text-slate-100 font-sans">
@@ -51,6 +52,7 @@ function DashboardContent() {
       <VideoCompareModal />
       <AccountConnectModal />
       <NewIdeaModal />
+      <InstallAppModal isOpen={isInstallModalOpen} onClose={() => setIsInstallModalOpen(false)} />
       <ToastContainer />
     </div>
   );

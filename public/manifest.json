@@ -1,0 +1,42 @@
+{
+  "name": "ClipPilot — Video & Social Media Studio",
+  "short_name": "ClipPilot",
+  "description": "Personal short-form video clipping and multi-platform publishing studio",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090c15",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "video", "social", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Upload Clip",
+      "short_name": "Upload",
+      "description": "Upload a new vertical clip to your library",
+      "url": "/?tab=library&action=upload",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Publishing Centre",
+      "short_name": "Publish",
+      "description": "Dispatch videos to Shorts, Reels, and TikTok",
+      "url": "/?tab=publishing",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Content Planner",
+      "short_name": "Planner",
+      "description": "View calendar and idea pipeline",
+      "url": "/?tab=planner",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "192x192" }]
+    }
+  ]
+}

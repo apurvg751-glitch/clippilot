@@ -10,6 +10,7 @@ import {
   ToggleLeft,
   ToggleRight,
   ShieldCheck,
+  Download,
 } from 'lucide-react';
 
 export function Header() {
@@ -20,6 +21,7 @@ export function Header() {
     toggleDemoMode,
     setIsUploadModalOpen,
     setIsIdeaModalOpen,
+    setIsInstallModalOpen,
     exportDataToCSV,
   } = useStore();
 
@@ -46,7 +48,17 @@ export function Header() {
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
+        {/* Install Native App Button */}
+        <button
+          onClick={() => setIsInstallModalOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-950/60 to-violet-950/60 hover:from-cyan-900/60 hover:to-violet-900/60 border border-cyan-500/40 text-cyan-300 hover:text-white text-xs font-semibold shadow-md shadow-cyan-950/20 transition-all hover:scale-[1.02]"
+          title="Install ClipPilot as an App on Computer or Phone"
+        >
+          <Download className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Install App</span>
+        </button>
+
         {/* Demo Mode Toggle */}
         <button
           onClick={toggleDemoMode}

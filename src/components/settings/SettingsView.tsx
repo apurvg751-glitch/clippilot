@@ -17,6 +17,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   Database,
+  Download,
+  Smartphone,
+  Monitor,
 } from 'lucide-react';
 import { YoutubeIcon as Youtube, InstagramIcon as Instagram } from '@/components/common/PlatformIcons';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -30,6 +33,7 @@ export function SettingsView() {
     exportDataToCSV,
     addToast,
     setAccountToConnect,
+    setIsInstallModalOpen,
   } = useStore();
 
   const [creatorName, setCreatorName] = useState('Alex Rivera');
@@ -282,6 +286,56 @@ export function SettingsView() {
             </div>
             <FileDown className="w-4 h-4 text-violet-400" />
           </button>
+        </div>
+      </div>
+
+      {/* Install App for PC & Phone */}
+      <div className="p-6 rounded-3xl glass-panel space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Download className="w-4 h-4 text-cyan-400" />
+              <span>Install ClipPilot as an App</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Install directly onto your Windows PC or Mobile Phone (Android / iPhone) for a native app experience.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsInstallModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-violet-600/20 transition-all flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            <span>Install Options</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div
+            onClick={() => setIsInstallModalOpen(true)}
+            className="p-3.5 rounded-xl bg-[#101627] border border-[#1d2742] hover:border-violet-500/40 cursor-pointer transition-colors flex items-center gap-3"
+          >
+            <div className="p-2.5 rounded-xl bg-violet-600/20 text-violet-400">
+              <Monitor className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white">Computer App (Windows / Mac)</div>
+              <div className="text-[10px] text-slate-400">Standalone window, desktop icon, taskbar shortcut</div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => setIsInstallModalOpen(true)}
+            className="p-3.5 rounded-xl bg-[#101627] border border-[#1d2742] hover:border-cyan-500/40 cursor-pointer transition-colors flex items-center gap-3"
+          >
+            <div className="p-2.5 rounded-xl bg-cyan-600/20 text-cyan-400">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-white">Phone App (Android / iPhone)</div>
+              <div className="text-[10px] text-slate-400">Add to home screen over local Wi-Fi</div>
+            </div>
+          </div>
         </div>
       </div>
 
