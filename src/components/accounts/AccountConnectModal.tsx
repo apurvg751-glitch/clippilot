@@ -18,7 +18,7 @@ import { YoutubeIcon as Youtube, InstagramIcon as Instagram } from '@/components
 export function AccountConnectModal() {
   const { accountToConnect, setAccountToConnect, toggleAccountConnection, addToast } = useStore();
 
-  const [ytClientId, setYtClientId] = useState('');
+  const [ytClientId, setYtClientId] = useState('721835915688-qdej5r983lidnsph7g3prel0h7lmn2tu.apps.googleusercontent.com');
   const [ytClientSecret, setYtClientSecret] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -106,64 +106,39 @@ export function AccountConnectModal() {
 
         {/* Modal Body */}
         <div className="p-6 space-y-5">
-          {/* Real YouTube Credentials Input Section */}
+          {/* Real YouTube Credentials Configured Section */}
           {isYT && !acc.isConnected && (
-            <form onSubmit={handleLiveYouTubeOAuth} className="p-4 rounded-2xl bg-[#121829] border border-rose-500/30 space-y-3.5">
+            <div className="p-5 rounded-2xl bg-[#121829] border border-rose-500/40 space-y-4 shadow-xl">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-white flex items-center gap-2">
-                  <Key className="w-4 h-4 text-rose-400" />
-                  <span>Enter Your Google Cloud OAuth 2.0 Credentials</span>
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  <span>Google Cloud Credentials Detected</span>
                 </span>
-                <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                  Live API
+                <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Ready to Authorize
                 </span>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-300">
-                  Google Client ID *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={ytClientId}
-                  onChange={(e) => setYtClientId(e.target.value)}
-                  placeholder="e.g. 1234567890-abcdefgh.apps.googleusercontent.com"
-                  className="w-full bg-[#0d1220] border border-[#212b45] rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 outline-none focus:border-rose-500 font-mono"
-                />
+              <div className="p-3 rounded-xl bg-[#0d1220] border border-[#1f2842] text-xs space-y-1 font-mono">
+                <div className="text-slate-400 text-[11px]">Client ID:</div>
+                <div className="text-cyan-300 truncate">721835915688-qdej5r983lidnsph7g3prel0h7lmn2tu.apps.googleusercontent.com</div>
+                <div className="text-slate-400 text-[11px] pt-1">Client Secret:</div>
+                <div className="text-slate-400">••••••••••••••••••••••••••••••••</div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-300">
-                  Google Client Secret *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={ytClientSecret}
-                  onChange={(e) => setYtClientSecret(e.target.value)}
-                  placeholder="GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxx"
-                  className="w-full bg-[#0d1220] border border-[#212b45] rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 outline-none focus:border-rose-500 font-mono"
-                />
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-[#090d17] border border-[#1d2740] text-[11px] text-slate-300 space-y-1">
-                <div className="text-slate-400 font-medium">Authorized Redirect URI to set in Google Cloud:</div>
-                <code className="text-cyan-300 font-mono select-all block bg-black/40 p-1.5 rounded">
-                  http://localhost:3000/api/auth/youtube/callback
-                </code>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold shadow-lg shadow-rose-600/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              <a
+                href="/api/auth/youtube"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
               >
-                <Lock className="w-3.5 h-3.5" />
-                <span>{isSaving ? 'Saving & Authenticating...' : 'Save & Authorize Real YouTube Account'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </form>
+                <Youtube className="w-4 h-4" />
+                <span>Authorize & Connect My Real YouTube Channel</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
+
+              <div className="text-[11px] text-slate-400 text-center">
+                Clicking will open Google's secure account consent screen.
+              </div>
+            </div>
           )}
 
           {/* Official API Permissions Checklist */}
