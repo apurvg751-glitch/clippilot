@@ -127,6 +127,46 @@ export function OverviewView() {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Live Connected YouTube Channel Card */}
+      {(() => {
+        const yt = accounts.find((a) => a.platform === 'youtube' && a.isConnected);
+        if (!yt) return null;
+        return (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/40 via-red-950/30 to-[#121829] border border-rose-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+            <div className="flex items-center gap-3.5">
+              <div className="p-2.5 rounded-xl bg-rose-600/20 text-rose-400 shrink-0">
+                <Youtube className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white">Connected YouTube Channel: {yt.displayName}</h3>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Live Channel
+                  </span>
+                </div>
+                <div className="text-xs text-slate-300 flex items-center gap-2 mt-0.5 font-mono">
+                  <span>{yt.handle}</span>
+                  <span>•</span>
+                  <span>{yt.followersOrSubscribers} Subscribers</span>
+                  <span>•</span>
+                  <span>{yt.totalViews} Total Views</span>
+                </div>
+              </div>
+            </div>
+
+            <a
+              href={`https://youtube.com/${yt.handle}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/30 flex items-center justify-center gap-1.5 transition-all shrink-0"
+            >
+              <span>Open on YouTube</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        );
+      })()}
+
       {/* Banner Notice on Combined Views */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-950/40 via-indigo-950/30 to-slate-900/60 border border-violet-500/30 flex items-start gap-3.5 shadow-lg">
         <div className="p-2 rounded-xl bg-violet-500/20 text-violet-300 shrink-0 mt-0.5">

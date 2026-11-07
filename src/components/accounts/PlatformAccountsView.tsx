@@ -87,8 +87,19 @@ export function PlatformAccountsView() {
                       <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                         <span>{acc.displayName}</span>
                       </h3>
-                      <div className="text-xs text-slate-400 font-mono mt-0.5">
-                        {acc.handle}
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-slate-400 font-mono">{acc.handle}</span>
+                        {acc.isConnected && isYT && (
+                          <a
+                            href={`https://youtube.com/${acc.handle}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 underline font-medium"
+                          >
+                            <span>Open</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
