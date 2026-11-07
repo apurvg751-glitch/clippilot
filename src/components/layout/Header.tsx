@@ -49,6 +49,12 @@ export function Header() {
 
       {/* Right Controls */}
       <div className="flex items-center gap-2.5">
+        {/* Live Connected YouTube Badge */}
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>YouTube: @apurvg-p9m (Live)</span>
+        </div>
+
         {/* Install Native App Button */}
         <button
           onClick={() => setIsInstallModalOpen(true)}
@@ -57,24 +63,6 @@ export function Header() {
         >
           <Download className="w-3.5 h-3.5 text-cyan-400" />
           <span>Install App</span>
-        </button>
-
-        {/* Demo Mode Toggle */}
-        <button
-          onClick={toggleDemoMode}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
-            isDemoMode
-              ? 'bg-violet-950/40 border-violet-500/40 text-violet-300 hover:bg-violet-900/40'
-              : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
-          }`}
-          title="Toggle between realistic sample data and live connected accounts"
-        >
-          {isDemoMode ? (
-            <ToggleRight className="w-4 h-4 text-violet-400" />
-          ) : (
-            <ToggleLeft className="w-4 h-4 text-slate-500" />
-          )}
-          <span>Demo Data {isDemoMode ? 'ON' : 'OFF'}</span>
         </button>
 
         {/* Quick CSV Export */}

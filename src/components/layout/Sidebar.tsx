@@ -58,24 +58,13 @@ export function Sidebar() {
               <h1 className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
                 ClipPilot
               </h1>
-              <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">
-                PRO
+              <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                LIVE
               </span>
             </div>
             <p className="text-xs text-slate-400 font-medium">Creator Command Studio</p>
           </div>
         </div>
-
-        {/* Demo Mode Notice */}
-        {isDemoMode && (
-          <div className="mt-3.5 px-3 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-between text-xs text-indigo-200">
-            <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-              Demo Preview Mode
-            </span>
-            <span className="text-[11px] text-indigo-300/80">Sample Data</span>
-          </div>
-        )}
       </div>
 
       {/* Main Navigation */}
@@ -163,13 +152,10 @@ export function Sidebar() {
         <div className="mt-4 pt-3 border-t border-[#1a233a]/60">
           <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5">
             <span className="flex items-center gap-1.5">
-              <HardDrive className="w-3 h-3 text-slate-400" />
-              Local Cache
+              <HardDrive className="w-3 h-3 text-emerald-400" />
+              Real Storage Mode
             </span>
-            <span className="text-slate-300 font-medium">182 MB / 5 GB</span>
-          </div>
-          <div className="w-full bg-[#161d31] rounded-full h-1.5 overflow-hidden">
-            <div className="bg-gradient-to-r from-violet-500 to-cyan-400 h-1.5 rounded-full w-[14%]" />
+            <span className="text-emerald-300 font-mono text-[10px]">Active</span>
           </div>
         </div>
       </div>

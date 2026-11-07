@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForTokens, getMyChannelData } from '@/lib/youtube';
+import { writeStoredSession } from '@/lib/youtube-session';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
@@ -18,6 +19,23 @@ export async function GET(req: NextRequest) {
   try {
     const tokens = await exchangeCodeForTokens(code, redirectUri);
     const channel = await getMyChannelData(tokens.access_token);
+
+    // Save tokens and channel data to persistent server storage on disk
+    writeStoredSession({
+      connected: true,
+      channelId: channel.channelId,
+      title: channel.title,
+      handle: channel.handle,
+      avatarUrl: channel.avatarUrl,
+      subscribersCount: channel.subscribersCount,
+      totalViews: channel.totalViews,
+      videoCount: channel.videoCount,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt: Date.now() + (tokens.expires_in || 3600) * 1000,
+      connectedAt: new Date().toISOString(),
+      lastVerified: new Date().toISOString(),
+    });
 
     // Redirect to dashboard with success query parameter
     const response = NextResponse.redirect(

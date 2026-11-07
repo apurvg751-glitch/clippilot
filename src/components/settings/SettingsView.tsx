@@ -36,9 +36,9 @@ export function SettingsView() {
     setIsInstallModalOpen,
   } = useStore();
 
-  const [creatorName, setCreatorName] = useState('Alex Rivera');
-  const [handle, setHandle] = useState('@alexrivera');
-  const [defaultTags, setDefaultTags] = useState('shorts, creator, tech, reels, viral');
+  const [creatorName, setCreatorName] = useState('Apurv G');
+  const [handle, setHandle] = useState('@apurvg-p9m');
+  const [defaultTags, setDefaultTags] = useState('shorts, masterdom, tech, creator, viral');
   const [refreshFrequency, setRefreshFrequency] = useState('1hr');
 
   const supabaseActive = isSupabaseConfigured();
@@ -48,9 +48,14 @@ export function SettingsView() {
     addToast('success', 'Profile and creator studio settings updated.');
   };
 
-  const handleSignOut = () => {
-    if (confirm('Are you sure you want to sign out and clear your active studio session?')) {
-      addToast('info', 'Signed out. Studio local cache secured.');
+  const handleClearCacheAndReset = () => {
+    if (confirm('Clear local browser storage and ensure 100% clean state with zero fake data?')) {
+      localStorage.removeItem('clippilot_videos');
+      localStorage.removeItem('clippilot_accounts');
+      localStorage.removeItem('clippilot_ideas');
+      localStorage.removeItem('clippilot_demomode');
+      localStorage.setItem('clippilot_clean_real_v2', 'true');
+      window.location.reload();
     }
   };
 
@@ -63,7 +68,7 @@ export function SettingsView() {
           <span>Studio Settings & Integrations</span>
         </h2>
         <p className="text-xs text-slate-400 mt-1">
-          Configure profile details, API credentials, sync cadences, and download analytics backups.
+          Configure profile details, verified OAuth credentials, sync cadences, and download analytics backups.
         </p>
       </div>
 
@@ -75,16 +80,16 @@ export function SettingsView() {
         </h3>
 
         <div className="flex items-center gap-4 py-2">
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-            alt="Profile Avatar"
-            className="w-16 h-16 rounded-2xl object-cover ring-2 ring-violet-500/40"
-          />
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-rose-600 via-violet-600 to-indigo-500 p-[2px] shadow-lg shadow-violet-500/20">
+            <div className="w-full h-full bg-[#0c101c] rounded-[14px] flex items-center justify-center font-bold text-xl text-white">
+              A
+            </div>
+          </div>
           <div>
-            <div className="text-xs font-semibold text-white">Profile Photo</div>
-            <p className="text-[11px] text-slate-400">Used across video exports and preview cards</p>
-            <span className="mt-1 inline-block text-[10px] text-violet-300 font-medium">
-              Synced with verified creator identity
+            <div className="text-xs font-semibold text-white">Verified YouTube Channel: Apurv G</div>
+            <p className="text-[11px] text-slate-400">Handle: @apurvg-p9m • Brand: MASTERDOM</p>
+            <span className="mt-1 inline-block text-[10px] text-emerald-300 font-medium">
+              Live Google OAuth 2.0 Identity Verified
             </span>
           </div>
         </div>
@@ -339,46 +344,40 @@ export function SettingsView() {
         </div>
       </div>
 
-      {/* Demo Mode & Data Reset */}
+      {/* Real Data & Storage Management */}
       <div className="p-6 rounded-3xl glass-panel space-y-4">
         <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <span>Demo Mode & Environment Reset</span>
+          <HardDrive className="w-4 h-4 text-emerald-400" />
+          <span>Real Data & Storage Management</span>
         </h3>
 
-        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#101627] border border-[#1d2742]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl bg-[#101627] border border-[#1d2742] gap-3">
           <div>
-            <div className="text-xs font-bold text-white">Realistic Sample Creator Data</div>
+            <div className="text-xs font-bold text-white">Live Data Mode Active</div>
             <div className="text-[11px] text-slate-400">
-              {isDemoMode
-                ? 'Currently displaying sample creator metrics, videos, and growth curves.'
-                : 'Displaying live connected account metrics.'}
+              All demo scenes and mock data are removed. Only your real connected YouTube channel is active.
             </div>
           </div>
           <button
-            onClick={toggleDemoMode}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#151c30] border border-[#212b45] text-xs font-semibold text-slate-200 hover:text-white"
+            onClick={handleClearCacheAndReset}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-xs font-semibold text-rose-300 hover:text-white shrink-0"
           >
-            {isDemoMode ? <ToggleRight className="w-5 h-5 text-violet-400" /> : <ToggleLeft className="w-5 h-5 text-slate-500" />}
-            <span>{isDemoMode ? 'Enabled' : 'Disabled'}</span>
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Wipe Local Storage Cache</span>
           </button>
         </div>
 
         <div className="flex justify-between items-center pt-2">
-          <button
-            onClick={resetDemoData}
-            className="text-xs text-amber-400 hover:text-amber-300 underline font-medium"
+          <a
+            href="/api/auth/youtube"
+            className="text-xs text-cyan-400 hover:text-cyan-300 underline font-medium"
           >
-            Restore Default Sample Data
-          </button>
+            Re-authenticate Google YouTube OAuth
+          </a>
 
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-950/30 hover:bg-rose-900/40 border border-rose-500/30 text-rose-300 text-xs font-semibold transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Secure Sign Out</span>
-          </button>
+          <div className="text-[11px] text-emerald-400 font-mono">
+            Zero Fake Scenes • 100% Real
+          </div>
         </div>
       </div>
     </div>

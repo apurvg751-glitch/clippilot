@@ -17,6 +17,7 @@ import {
   Check,
   Film,
   Smartphone,
+  Plus,
 } from 'lucide-react';
 import { YoutubeIcon as Youtube, InstagramIcon as Instagram } from '@/components/common/PlatformIcons';
 
@@ -29,6 +30,7 @@ export function PublishingCentreView() {
     cancelPublishing,
     updatePlatformCaption,
     setActiveTab,
+    setIsUploadModalOpen,
   } = useStore();
 
   // Find a default video
@@ -66,15 +68,15 @@ export function PublishingCentreView() {
     tiktok: string;
   }>({
     youtube:
-      selectedVideo?.platformCaptions.youtube?.caption ||
+      selectedVideo?.platformCaptions?.youtube?.caption ||
       selectedVideo?.description ||
       'Top AI workflow tools in 2026 #Shorts #Tech',
     instagram:
-      selectedVideo?.platformCaptions.instagram?.caption ||
+      selectedVideo?.platformCaptions?.instagram?.caption ||
       selectedVideo?.description ||
       'Save this for later! ⚡️ #reels #productivity',
     tiktok:
-      selectedVideo?.platformCaptions.tiktok?.caption ||
+      selectedVideo?.platformCaptions?.tiktok?.caption ||
       selectedVideo?.description ||
       'Try this before it gets patched 😳 #fyp #techtok',
   });
@@ -131,6 +133,26 @@ export function PublishingCentreView() {
       </div>
 
       {/* Main Publishing Workspace: Left Controls / Right Mobile Preview */}
+      {videos.length === 0 ? (
+        <div className="p-12 rounded-3xl glass-panel text-center space-y-4 border border-[#202c4b]">
+          <div className="w-16 h-16 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center mx-auto text-violet-400">
+            <Film className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-white">No Videos in Library to Publish</h3>
+            <p className="text-xs text-slate-400 max-w-md mx-auto">
+              Upload your original vertical 9:16 video clip to configure custom captions and publish directly to your connected YouTube Shorts channel.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-violet-600/30 flex items-center gap-2 mx-auto transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Upload Video to Library</span>
+          </button>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Form & Configuration */}
         <div className="lg:col-span-7 space-y-6">
@@ -549,6 +571,7 @@ export function PublishingCentreView() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

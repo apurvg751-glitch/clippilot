@@ -178,7 +178,20 @@ export function AnalyticsView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#182035] text-slate-200">
-              {filteredPosts.map((post, idx) => {
+              {filteredPosts.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-12 px-4 text-center text-slate-400">
+                    <div className="max-w-sm mx-auto space-y-2">
+                      <BarChart3 className="w-8 h-8 mx-auto text-slate-500" />
+                      <div className="text-sm font-semibold text-white">No published video posts yet</div>
+                      <p className="text-xs text-slate-400">
+                        Once you publish a vertical clip through ClipPilot, real-time Google YouTube Shorts statistics and telemetry will appear here.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredPosts.map((post, idx) => {
                 const isYT = post.platform === 'youtube';
                 const isIG = post.platform === 'instagram';
 
@@ -294,7 +307,7 @@ export function AnalyticsView() {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>

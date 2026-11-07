@@ -81,7 +81,7 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<NavigationTab>('overview');
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
   
   const [videos, setVideos] = useState<VideoItem[]>(SAMPLE_VIDEOS);
@@ -107,20 +107,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     isPublishing: false,
   });
 
-  // Load from local storage if available
+  // Ensure clean real data upon first load, wiping legacy mock seeds
   useEffect(() => {
     try {
-      const savedVideos = localStorage.getItem('clippilot_videos');
-      if (savedVideos) setVideos(JSON.parse(savedVideos));
+      const cleanFlag = localStorage.getItem('clippilot_clean_real_v2');
+      if (!cleanFlag) {
+        localStorage.removeItem('clippilot_videos');
+        localStorage.removeItem('clippilot_accounts');
+        localStorage.removeItem('clippilot_ideas');
+        localStorage.removeItem('clippilot_demomode');
+        localStorage.setItem('clippilot_clean_real_v2', 'true');
+        setVideos([]);
+        setDailyAnalytics([]);
+        setIdeas([]);
+        setIsDemoMode(false);
+      } else {
+        const savedVideos = localStorage.getItem('clippilot_videos');
+        if (savedVideos) setVideos(JSON.parse(savedVideos));
 
-      const savedAccounts = localStorage.getItem('clippilot_accounts');
-      if (savedAccounts) setAccounts(JSON.parse(savedAccounts));
+        const savedAccounts = localStorage.getItem('clippilot_accounts');
+        if (savedAccounts) setAccounts(JSON.parse(savedAccounts));
 
-      const savedIdeas = localStorage.getItem('clippilot_ideas');
-      if (savedIdeas) setIdeas(JSON.parse(savedIdeas));
-
-      const savedDemo = localStorage.getItem('clippilot_demomode');
-      if (savedDemo !== null) setIsDemoMode(savedDemo === 'true');
+        const savedIdeas = localStorage.getItem('clippilot_ideas');
+        if (savedIdeas) setIdeas(JSON.parse(savedIdeas));
+      }
     } catch {
       // LocalStorage not available or parse error
     }
@@ -176,7 +186,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             })
           );
           setIsDemoMode(false);
-          addToast('success', `Live YouTube Channel Connected: ${data.channel.title}`);
         }
       })
       .catch(() => {

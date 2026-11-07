@@ -53,6 +53,33 @@ export async function exchangeCodeForTokens(code: string, redirectUri: string) {
   return await res.json();
 }
 
+export async function refreshAccessToken(refreshToken: string) {
+  const clientId = process.env.YOUTUBE_CLIENT_ID;
+  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('YouTube OAuth credentials missing in .env.local');
+  }
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to refresh access token: ${errorText}`);
+  }
+
+  return await res.json();
+}
+
 export async function getMyChannelData(accessToken: string) {
   const url = 'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&mine=true';
   const res = await fetch(url, {

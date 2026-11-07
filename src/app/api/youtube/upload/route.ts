@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadYouTubeShort } from '@/lib/youtube';
+import { getActiveYouTubeToken } from '@/lib/youtube-session';
 
 export async function POST(req: NextRequest) {
-  const accessToken = req.cookies.get('yt_access_token')?.value;
+  let accessToken = req.cookies.get('yt_access_token')?.value;
+
+  if (!accessToken) {
+    accessToken = (await getActiveYouTubeToken()) || undefined;
+  }
 
   if (!accessToken) {
     return NextResponse.json(

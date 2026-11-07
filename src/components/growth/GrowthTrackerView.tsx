@@ -134,33 +134,39 @@ export function GrowthTrackerView() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-4 rounded-2xl glass-card">
           <div className="text-xs text-slate-400 font-medium">Weekly Growth Delta</div>
-          <div className="text-2xl font-bold text-white mt-1">+18.4%</div>
-          <div className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            <span>Accelerating view velocity across TikTok & Shorts</span>
+          <div className="text-2xl font-bold text-white mt-1">
+            {filteredData.length > 0 ? '+0.0%' : '0%'}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1 font-mono">
+            <Sparkles className="w-3 h-3 text-cyan-400" />
+            <span>Ready to track view velocity</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl glass-card">
           <div className="text-xs text-slate-400 font-medium">Monthly Growth Delta</div>
-          <div className="text-2xl font-bold text-white mt-1">+32.6%</div>
-          <div className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            <span>Net new audience accretion up MoM</span>
+          <div className="text-2xl font-bold text-white mt-1">
+            {filteredData.length > 0 ? '+0.0%' : '0%'}
+          </div>
+          <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1 font-mono">
+            <Sparkles className="w-3 h-3 text-cyan-400" />
+            <span>Baseline initialized</span>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl glass-card">
           <div className="text-xs text-slate-400 font-medium">Avg Daily Views</div>
           <div className="text-2xl font-bold text-white mt-1">
-            {formatNumber(
-              Math.floor(
-                filteredData.reduce((s, d) => s + d.combinedViews, 0) / (filteredData.length || 1)
-              )
-            )}
+            {filteredData.length > 0
+              ? formatNumber(
+                  Math.floor(
+                    filteredData.reduce((s, d) => s + d.combinedViews, 0) / filteredData.length
+                  )
+                )
+              : '0'}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">
-            Over the selected {dateRangeDays}-day timeframe
+          <div className="text-[11px] text-slate-400 mt-1 font-mono">
+            Live telemetry mode
           </div>
         </div>
       </div>
