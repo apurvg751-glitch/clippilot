@@ -17,13 +17,14 @@ export function Header() {
   const {
     searchQuery,
     setSearchQuery,
-    isDemoMode,
-    toggleDemoMode,
+    accounts,
     setIsUploadModalOpen,
     setIsIdeaModalOpen,
     setIsInstallModalOpen,
     exportDataToCSV,
   } = useStore();
+
+  const yt = accounts.find((a) => a.platform === 'youtube');
 
   return (
     <header className="h-16 px-6 bg-[#0c101c]/90 backdrop-blur-md border-b border-[#1a233a] flex items-center justify-between sticky top-0 z-20">
@@ -52,7 +53,7 @@ export function Header() {
         {/* Live Connected YouTube Badge */}
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs font-medium">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>YouTube: @apurvg-p9m (Live)</span>
+          <span>YouTube: {yt?.displayName || 'MASTERDOM'} (Live)</span>
         </div>
 
         {/* Install Native App Button */}

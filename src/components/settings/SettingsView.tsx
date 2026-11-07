@@ -36,7 +36,7 @@ export function SettingsView() {
     setIsInstallModalOpen,
   } = useStore();
 
-  const [creatorName, setCreatorName] = useState('Apurv G');
+  const [creatorName, setCreatorName] = useState('MASTERDOM');
   const [handle, setHandle] = useState('@apurvg-p9m');
   const [defaultTags, setDefaultTags] = useState('shorts, masterdom, tech, creator, viral');
   const [refreshFrequency, setRefreshFrequency] = useState('1hr');
@@ -86,7 +86,7 @@ export function SettingsView() {
             </div>
           </div>
           <div>
-            <div className="text-xs font-semibold text-white">Verified YouTube Channel: Apurv G</div>
+            <div className="text-xs font-semibold text-white">Verified YouTube Channel: MASTERDOM</div>
             <p className="text-[11px] text-slate-400">Handle: @apurvg-p9m • Brand: MASTERDOM</p>
             <span className="mt-1 inline-block text-[10px] text-emerald-300 font-medium">
               Live Google OAuth 2.0 Identity Verified

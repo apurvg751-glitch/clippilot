@@ -72,6 +72,7 @@ interface StoreContextType {
   syncAccount: (accountId: string) => void;
   exportDataToCSV: (type: 'videos' | 'growth') => void;
   resetDemoData: () => void;
+  updateYouTubeChannelName: (newTitle: string, newHandle?: string) => Promise<void>;
   toasts: ToastMessage[];
   addToast: (type: 'success' | 'error' | 'info', message: string) => void;
   removeToast: (id: string) => void;
@@ -483,6 +484,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateYouTubeChannelName = async (newTitle: string, newHandle?: string) => {
+    try {
+      const res = await fetch('/api/youtube/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle, handle: newHandle }),
+      });
+      if (res.ok) {
+        setAccounts((prev) =>
+          prev.map((acc) => {
+            if (acc.platform !== 'youtube') return acc;
+            return {
+              ...acc,
+              displayName: newTitle,
+              handle: newHandle || acc.handle,
+              lastSyncAt: new Date().toISOString(),
+            };
+          })
+        );
+        addToast('success', `Channel name updated to "${newTitle}"!`);
+      }
+    } catch (err: any) {
+      addToast('error', `Failed to update channel name: ${err.message}`);
+    }
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -523,6 +550,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         syncAccount,
         exportDataToCSV,
         resetDemoData,
+        updateYouTubeChannelName,
         toasts,
         addToast,
         removeToast,

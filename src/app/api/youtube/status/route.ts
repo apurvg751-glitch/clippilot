@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     session = writeStoredSession({
       connected: true,
       channelId: 'UC_apurvg-p9m',
-      title: 'Apurv G',
+      title: 'MASTERDOM',
       handle: '@apurvg-p9m',
       subscribersCount: 0,
       totalViews: 0,
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
     channel: session
       ? {
           channelId: session.channelId || 'UC_apurvg-p9m',
-          title: session.title || 'Apurv G',
+          title: session.title || 'MASTERDOM',
           handle: session.handle || '@apurvg-p9m',
           avatarUrl: session.avatarUrl || null,
           subscribersCount: session.subscribersCount ?? 0,
@@ -107,4 +107,24 @@ export async function GET(req: NextRequest) {
         }
       : null,
   });
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { title, handle } = body;
+    if (!title) {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+    }
+
+    const updated = writeStoredSession({
+      title,
+      handle: handle || undefined,
+      lastSync: new Date().toISOString(),
+    });
+
+    return NextResponse.json({ success: true, channel: updated });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }

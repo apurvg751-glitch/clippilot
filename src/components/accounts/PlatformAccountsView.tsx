@@ -12,13 +12,18 @@ import {
   Key,
   Radio,
   Lock,
+  Edit3,
+  Check,
+  X,
 } from 'lucide-react';
 import { YoutubeIcon as Youtube, InstagramIcon as Instagram } from '@/components/common/PlatformIcons';
 
 export function PlatformAccountsView() {
-  const { accounts, setAccountToConnect, syncAccount } = useStore();
+  const { accounts, setAccountToConnect, syncAccount, updateYouTubeChannelName } = useStore();
   const [pingStatus, setPingStatus] = useState<string | null>(null);
   const [isPinging, setIsPinging] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
 
   const formatNumber = (num?: number) => {
     if (num === undefined || num === null) return '0';
@@ -111,8 +116,53 @@ export function PlatformAccountsView() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 text-xs font-mono">
           <div className="p-3 rounded-xl bg-[#0d1322] border border-[#1d2742]">
-            <div className="text-[10px] uppercase text-slate-400 font-semibold font-sans">Authorized Channel</div>
-            <div className="text-white font-bold text-sm mt-0.5">{ytAccount?.displayName || 'Apurv G'}</div>
+            <div className="flex items-center justify-between">
+              <div className="text-[10px] uppercase text-slate-400 font-semibold font-sans">Authorized Channel</div>
+              {!isEditingName && (
+                <button
+                  onClick={() => {
+                    setNameInput(ytAccount?.displayName || 'MASTERDOM');
+                    setIsEditingName(true);
+                  }}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 font-sans flex items-center gap-0.5"
+                >
+                  <Edit3 className="w-2.5 h-2.5" />
+                  <span>Edit</span>
+                </button>
+              )}
+            </div>
+            {isEditingName ? (
+              <div className="flex items-center gap-1 mt-1">
+                <input
+                  type="text"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  className="bg-[#121829] border border-violet-500 rounded px-2 py-0.5 text-xs text-white outline-none w-full font-bold"
+                  autoFocus
+                />
+                <button
+                  onClick={async () => {
+                    if (nameInput.trim()) {
+                      await updateYouTubeChannelName(nameInput.trim());
+                      setIsEditingName(false);
+                    }
+                  }}
+                  className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white"
+                  title="Save"
+                >
+                  <Check className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setIsEditingName(false)}
+                  className="p-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300"
+                  title="Cancel"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <div className="text-white font-bold text-sm mt-0.5">{ytAccount?.displayName || 'MASTERDOM'}</div>
+            )}
             <div className="text-cyan-400 text-xs">{ytAccount?.handle || '@apurvg-p9m'}</div>
           </div>
           <div className="p-3 rounded-xl bg-[#0d1322] border border-[#1d2742]">

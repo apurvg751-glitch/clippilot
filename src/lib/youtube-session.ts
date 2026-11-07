@@ -21,23 +21,25 @@ export interface YouTubeSessionData {
   connectedAt?: string;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const SESSION_FILE = path.join(DATA_DIR, 'youtube_session.json');
-
-// Ensure data directory exists
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+function getSessionFilePath(): string {
+  const dataDir = path.resolve(process.cwd(), 'data');
+  if (!fs.existsSync(dataDir)) {
+    try {
+      fs.mkdirSync(dataDir, { recursive: true });
+    } catch {
+      // ignore
+    }
   }
+  return path.resolve(dataDir, 'youtube_session.json');
 }
 
 export function readStoredSession(): YouTubeSessionData | null {
   try {
-    ensureDataDir();
-    if (!fs.existsSync(SESSION_FILE)) {
+    const filePath = getSessionFilePath();
+    if (!fs.existsSync(filePath)) {
       return null;
     }
-    const raw = fs.readFileSync(SESSION_FILE, 'utf-8');
+    const raw = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(raw);
   } catch (err) {
     console.warn('Could not read stored YouTube session:', err);
@@ -46,11 +48,11 @@ export function readStoredSession(): YouTubeSessionData | null {
 }
 
 export function writeStoredSession(data: Partial<YouTubeSessionData>): YouTubeSessionData {
-  ensureDataDir();
+  const filePath = getSessionFilePath();
   const existing = readStoredSession() || {
-    connected: false,
+    connected: true,
     channelId: 'UC_apurvg-p9m',
-    title: 'Apurv G',
+    title: 'MASTERDOM',
     handle: '@apurvg-p9m',
     subscribersCount: 0,
     totalViews: 0,
@@ -69,7 +71,11 @@ export function writeStoredSession(data: Partial<YouTubeSessionData>): YouTubeSe
     lastSync: new Date().toISOString(),
   };
 
-  fs.writeFileSync(SESSION_FILE, JSON.stringify(updated, null, 2), 'utf-8');
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(updated, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('Could not write stored YouTube session:', err);
+  }
   return updated;
 }
 

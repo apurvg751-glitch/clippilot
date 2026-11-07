@@ -19,6 +19,9 @@ import {
   RotateCw,
   Plus,
   Radio,
+  Edit3,
+  Check,
+  X,
 } from 'lucide-react';
 import { YoutubeIcon as Youtube } from '@/components/common/PlatformIcons';
 import {
@@ -40,10 +43,13 @@ export function OverviewView() {
     dailyAnalytics,
     setActiveTab,
     setIsUploadModalOpen,
+    updateYouTubeChannelName,
   } = useStore();
 
   const [pingStatus, setPingStatus] = useState<string | null>(null);
   const [isPinging, setIsPinging] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
 
   // Aggregate stats across videos and accounts
   const publishedVideos = videos.filter((v) => v.status === 'published');
@@ -126,7 +132,7 @@ export function OverviewView() {
       const data = await res.json();
       const ms = Date.now() - start;
       if (res.ok && data.connected) {
-        setPingStatus(`VERIFIED: Google API HTTP 200 OK (${ms}ms) • Channel: ${data.channel?.title || 'Apurv G'}`);
+        setPingStatus(`VERIFIED: Google API HTTP 200 OK (${ms}ms) • Channel: ${data.channel?.title || 'MASTERDOM'}`);
       } else {
         setPingStatus(`Google Handshake OK (${ms}ms) • Session Active`);
       }
@@ -151,9 +157,54 @@ export function OverviewView() {
 
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-bold text-white tracking-wide">
-                  Channel: {ytAccount?.displayName || 'Apurv G'}
-                </span>
+                {isEditingName ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      placeholder="e.g. MASTERDOM"
+                      className="bg-[#121829] border border-violet-500 rounded-lg px-2.5 py-1 text-xs text-white outline-none font-bold"
+                      autoFocus
+                    />
+                    <button
+                      onClick={async () => {
+                        if (nameInput.trim()) {
+                          await updateYouTubeChannelName(nameInput.trim());
+                          setIsEditingName(false);
+                        }
+                      }}
+                      className="p-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white"
+                      title="Save channel name"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setIsEditingName(false)}
+                      className="p-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-300"
+                      title="Cancel"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white tracking-wide">
+                      Channel: {ytAccount?.displayName || 'MASTERDOM'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setNameInput(ytAccount?.displayName || 'MASTERDOM');
+                        setIsEditingName(true);
+                      }}
+                      className="px-2 py-0.5 rounded-md text-[11px] font-semibold text-cyan-300 bg-cyan-950/40 border border-cyan-500/30 hover:bg-cyan-900/40 transition-colors flex items-center gap-1"
+                      title="Edit or sync channel name"
+                    >
+                      <Edit3 className="w-3 h-3 text-cyan-400" />
+                      <span>Edit Name</span>
+                    </button>
+                  </div>
+                )}
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   GOOGLE OAUTH 2.0 CONNECTED & LIVE VERIFIED
@@ -176,6 +227,15 @@ export function OverviewView() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <a
+              href="/api/auth/youtube"
+              className="px-3.5 py-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+              title="1-click refresh Google YouTube OAuth session and pull updated name from Google servers"
+            >
+              <RotateCw className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Sync with Google</span>
+            </a>
+
             <button
               onClick={handleTestGooglePing}
               disabled={isPinging}
@@ -183,7 +243,7 @@ export function OverviewView() {
               title="Verify live handshake with Google YouTube Data API"
             >
               <RotateCw className={`w-3.5 h-3.5 text-cyan-400 ${isPinging ? 'animate-spin' : ''}`} />
-              <span>Ping Google API Proof</span>
+              <span>Ping Proof</span>
             </button>
 
             <a

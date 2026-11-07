@@ -6,7 +6,7 @@ export const SAMPLE_ACCOUNTS: SocialAccount[] = [
     platform: 'youtube',
     platformName: 'YouTube Shorts',
     handle: '@apurvg-p9m',
-    displayName: 'Apurv G',
+    displayName: 'MASTERDOM',
     avatarUrl: '',
     isConnected: true,
     status: 'connected',
