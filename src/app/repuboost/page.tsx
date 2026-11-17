@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { getStandTheme, downloadDesignedStand } from '@/lib/standGenerator';
 import { SubscriptionStatus } from '@/types/repuboost';
+import StarLoadingScreen from '@/components/common/StarLoadingScreen';
 
 interface ClientRecord {
   id: string;
@@ -762,12 +763,12 @@ export default function RepuBoostDashboard() {
 
   if (isAuthChecking) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isLight ? 'bg-slate-50 text-slate-900' : 'bg-[#07090e] text-slate-100'}`}>
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold text-slate-500">Checking authorization...</p>
-        </div>
-      </div>
+      <StarLoadingScreen
+        theme={isLight ? 'luxury' : 'dark'}
+        badge="Agency Master Control"
+        title="Accessing Master Admin Panel"
+        subtitle="Verifying authorization and decrypting client telemetry..."
+      />
     );
   }
 
@@ -3449,6 +3450,17 @@ GRANT EXECUTE ON FUNCTION public.increment_business_metric(UUID, TEXT) TO anon, 
             </form>
           </div>
         </div>
+      )}
+
+      {/* Stand Generation Luxury Star Loading Overlay */}
+      {isDownloadingStandAdmin && (
+        <StarLoadingScreen
+          theme="overlay"
+          badge="Print Studio"
+          badgeIcon={<Printer className="w-3.5 h-3.5 text-amber-400" />}
+          title="Generating 4x6&quot; Acrylic Stand Graphic"
+          subtitle="Baking 300 DPI vector QR, category palette & personalized shop branding..."
+        />
       )}
     </div>
   );

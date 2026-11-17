@@ -34,6 +34,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { getStandTheme, downloadDesignedStand } from '@/lib/standGenerator';
+import StarLoadingScreen from '@/components/common/StarLoadingScreen';
 
 interface TenantShop {
   id: string;
@@ -166,6 +167,7 @@ function PortalInner() {
   const fetchTenantData = async (shopSlug: string, accessPin: string) => {
     setIsLoading(true);
     setAuthError(null);
+    const startTime = Date.now();
     try {
       const res = await fetch(`/api/portal?shop=${encodeURIComponent(shopSlug)}&pin=${encodeURIComponent(accessPin)}`);
       const data = await res.json();
@@ -185,7 +187,11 @@ function PortalInner() {
     } catch (err) {
       setAuthError('Connection error. Please try again.');
     } finally {
-      setIsLoading(false);
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 650 - elapsed);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, remaining);
     }
   };
 
@@ -329,6 +335,18 @@ function PortalInner() {
   // --------------------------------------------------------------------------
   // SCREEN 1: LOGIN GATE (If not authenticated)
   // --------------------------------------------------------------------------
+  if (isLoading && !authenticatedShop) {
+    return (
+      <StarLoadingScreen
+        theme={isLight ? 'luxury' : 'dark'}
+        badge="Store Management Portal"
+        badgeIcon={<Store className="w-3.5 h-3.5 text-amber-500" />}
+        title="Entering Store Portal"
+        subtitle="Verifying store credentials & opening your private reputation desk..."
+      />
+    );
+  }
+
   if (!authenticatedShop) {
     return (
       <div
@@ -1363,6 +1381,17 @@ function PortalInner() {
         </div>
       )}
 
+      {/* Stand Generation Luxury Star Loading Overlay */}
+      {isDownloadingStand && (
+        <StarLoadingScreen
+          theme="overlay"
+          badge="Print Studio"
+          badgeIcon={<Printer className="w-3.5 h-3.5 text-amber-400" />}
+          title="Generating 4x6&quot; Acrylic Stand Graphic"
+          subtitle="Baking 300 DPI vector QR, category palette & personalized shop branding..."
+        />
+      )}
+
       {/* Footer */}
       <footer className={`py-4 text-center text-xs border-t ${isLight ? 'border-slate-200 text-slate-400' : 'border-slate-800 text-slate-600'}`}>
         RepuBoost Client Portal • {authenticatedShop.name} ({authenticatedShop.city})
@@ -1373,7 +1402,17 @@ function PortalInner() {
 
 export default function PortalPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading portal...</div>}>
+    <Suspense
+      fallback={
+        <StarLoadingScreen
+          theme="dark"
+          badge="Store Management Portal"
+          badgeIcon={<Store className="w-3.5 h-3.5 text-amber-400" />}
+          title="Entering Store Portal"
+          subtitle="Authenticating store security keys & loading live feedback desk..."
+        />
+      }
+    >
       <PortalInner />
     </Suspense>
   );

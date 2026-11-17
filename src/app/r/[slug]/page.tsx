@@ -247,6 +247,9 @@ function ReviewPageInner() {
     }
 
     setIsLoadingStatus(true);
+    const startTime = Date.now();
+    const minDisplayMs = 700;
+
     fetch(`/api/repuboost?slug=${encodeURIComponent(slug)}`)
       .then((res) => {
         if (!res.ok) {
@@ -299,7 +302,11 @@ function ReviewPageInner() {
         setIsNotFound(true);
       })
       .finally(() => {
-        setIsLoadingStatus(false);
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, minDisplayMs - elapsed);
+        setTimeout(() => {
+          setIsLoadingStatus(false);
+        }, remaining);
       });
   }, [slug]);
 
@@ -398,15 +405,78 @@ function ReviewPageInner() {
       {/* Main Luxury Cream Parchment Card */}
       <main className="relative z-10 w-full max-w-lg bg-[#fffdfa]/95 backdrop-blur-xl border border-amber-300/70 rounded-3xl p-5 sm:p-8 shadow-[0_25px_60px_-12px_rgba(180,83,9,0.22)] ring-1 ring-amber-400/20">
         
-        {/* Loading State Skeleton */}
+        {/* Animated Spawning Star Loading Screen */}
         {isLoadingStatus ? (
-          <div className="text-center py-10 space-y-4">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-200/60 animate-pulse flex items-center justify-center">
-              <Store className="w-7 h-7 text-amber-600/70 animate-bounce" />
+          <div className="text-center py-10 px-2 space-y-6 animate-in fade-in duration-300">
+            {/* Center Animated Spawning Star Emblem */}
+            <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
+              {/* Outer Pulsing Golden Aura */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-amber-400/30 via-yellow-300/40 to-amber-500/20 blur-2xl animate-pulse" />
+
+              {/* Celestial Rotating Star Ring */}
+              <div className="absolute inset-2 rounded-full border-2 border-dashed border-amber-400/60 animate-star-ring" />
+
+              {/* Orbiting Satellite Star */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-star-orbit">
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+              </div>
+
+              {/* Floating Spawning Micro-Sparks */}
+              <div className="absolute -top-1 left-8 pointer-events-none animate-star-sparkle" style={{ animationDelay: '0.2s' }}>
+                <span className="text-amber-500 text-xs font-black">✦</span>
+              </div>
+              <div className="absolute -bottom-1 right-8 pointer-events-none animate-star-sparkle" style={{ animationDelay: '0.9s' }}>
+                <span className="text-amber-500 text-xs font-black">★</span>
+              </div>
+              <div className="absolute top-5 right-2 pointer-events-none animate-star-sparkle" style={{ animationDelay: '1.4s' }}>
+                <span className="text-yellow-500 text-[10px] font-black">✧</span>
+              </div>
+
+              {/* The Main Spawning Star (Scales into Star Shape from 0 with Spring Physics) */}
+              <div className="relative z-10 flex items-center justify-center animate-star-spawn">
+                <div className="relative flex items-center justify-center p-4 rounded-3xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 shadow-xl shadow-amber-500/40 border border-amber-200/50">
+                  <Star className="w-12 h-12 fill-white text-white drop-shadow-[0_4px_12px_rgba(217,119,6,0.6)] animate-star-twinkle" />
+                </div>
+              </div>
             </div>
-            <div className="h-6 bg-amber-200/50 rounded-lg w-48 mx-auto animate-pulse" />
-            <div className="h-3 bg-amber-200/40 rounded w-32 mx-auto animate-pulse" />
-            <p className="text-xs text-amber-800/70 pt-2 font-medium">Connecting to verified portal...</p>
+
+            {/* Title & Brand */}
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-100 border border-amber-300/80 text-[11px] font-black uppercase tracking-wider text-amber-900 shadow-sm">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
+                <span>RepuBoost™ Verified</span>
+              </div>
+              <h2 className="text-lg font-black tracking-tight text-amber-950">
+                Opening Feedback Gateway
+              </h2>
+              <p className="text-xs text-amber-800/70 font-medium">
+                Spawning your 5-star customer experience...
+              </p>
+            </div>
+
+            {/* 5 Sequentially Spawning Gold Stars */}
+            <div className="flex items-center justify-center gap-2 pt-1">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="w-9 h-9 rounded-xl bg-amber-100/90 border border-amber-300/80 flex items-center justify-center shadow-md animate-star-spawn"
+                  style={{
+                    animationDelay: `${150 + i * 140}ms`,
+                    transformOrigin: 'center center',
+                  }}
+                >
+                  <Star
+                    className="w-5 h-5 fill-amber-400 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] animate-star-twinkle"
+                    style={{ animationDelay: `${i * 200}ms` }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Golden Progress Shimmer Bar */}
+            <div className="w-48 mx-auto bg-amber-200/50 rounded-full h-1.5 overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-600 h-full w-full animate-progress-fast" />
+            </div>
           </div>
         ) : isNotFound || !business.name ? (
           <div className="text-center py-10 space-y-4 animate-in fade-in duration-200">
