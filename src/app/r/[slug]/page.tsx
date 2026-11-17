@@ -28,6 +28,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface BusinessInfo {
@@ -107,6 +108,7 @@ function ReviewPageInner() {
   const [complaintText, setComplaintText] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // 1-Tap Positive Compliment & Direct Launch States (No shuffle friction - saves customer time)
   const [selectedPositiveTag, setSelectedPositiveTag] = useState<string | null>(null);
@@ -331,6 +333,20 @@ function ReviewPageInner() {
       return;
     }
 
+    setFormError(null);
+
+    // Validation: Name and Phone are mandatory
+    if (!customerName.trim()) {
+      setFormError('Please enter your name so the store manager knows who to address.');
+      return;
+    }
+
+    const cleanPhone = customerPhone.replace(/[^0-9]/g, '');
+    if (!customerPhone.trim() || cleanPhone.length < 10) {
+      setFormError('Please enter a valid 10-digit mobile or WhatsApp number.');
+      return;
+    }
+
     const tagsSummary = selectedTags.length > 0 ? `Issues reported: ${selectedTags.join(', ')}` : '';
     const userNotes = complaintText.trim();
     
@@ -348,8 +364,8 @@ function ReviewPageInner() {
           action: 'submit_feedback',
           business_slug: slug,
           rating,
-          customer_name: customerName.trim() || 'Valued Guest',
-          customer_contact: customerPhone.trim() || 'N/A',
+          customer_name: customerName.trim(),
+          customer_contact: customerPhone.trim(),
           complaint_text: finalComplaint,
         }),
       });
@@ -711,31 +727,60 @@ function ReviewPageInner() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-amber-950">Your Name</label>
-                        <span className="text-[10px] text-amber-800/60 font-medium">Optional</span>
+                        <label className="block text-xs font-bold text-amber-950">
+                          Your Name <span className="text-rose-600 font-black">*</span>
+                        </label>
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md">
+                          Required
+                        </span>
                       </div>
                       <input
                         type="text"
+                        required
                         value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
+                        onChange={(e) => {
+                          setCustomerName(e.target.value);
+                          if (formError) setFormError(null);
+                        }}
                         placeholder="e.g. Sunil"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white text-amber-950 border border-amber-300/80 text-xs placeholder-amber-800/40 focus:outline-none focus:border-amber-600 shadow-sm"
+                        className={`w-full px-3.5 py-2.5 rounded-xl bg-white text-amber-950 border text-xs placeholder-amber-800/40 focus:outline-none focus:border-amber-600 shadow-sm transition-all ${
+                          formError && !customerName.trim() ? 'border-rose-500 ring-1 ring-rose-500' : 'border-amber-300/80'
+                        }`}
                       />
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-amber-950">Phone / WhatsApp</label>
-                        <span className="text-[10px] text-amber-800/60 font-medium">Optional</span>
+                        <label className="block text-xs font-bold text-amber-950">
+                          Phone / WhatsApp <span className="text-rose-600 font-black">*</span>
+                        </label>
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md">
+                          Required
+                        </span>
                       </div>
                       <input
                         type="tel"
+                        required
                         value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        onChange={(e) => {
+                          setCustomerPhone(e.target.value);
+                          if (formError) setFormError(null);
+                        }}
                         placeholder="+91 98765 43210"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white text-amber-950 border border-amber-300/80 text-xs placeholder-amber-800/40 focus:outline-none focus:border-amber-600 shadow-sm"
+                        className={`w-full px-3.5 py-2.5 rounded-xl bg-white text-amber-950 border text-xs placeholder-amber-800/40 focus:outline-none focus:border-amber-600 shadow-sm transition-all ${
+                          formError && (!customerPhone.trim() || customerPhone.replace(/[^0-9]/g, '').length < 10)
+                            ? 'border-rose-500 ring-1 ring-rose-500'
+                            : 'border-amber-300/80'
+                        }`}
                       />
                     </div>
                   </div>
+
+                  {formError && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{formError}</span>
+                    </div>
+                  )}
 
                   <button
                     type="submit"
@@ -772,13 +817,6 @@ function ReviewPageInner() {
           <Lock className="w-3.5 h-3.5 text-amber-700" />
           <span>100% Private & Verified Customer Gateway • Powered by <span className="font-bold text-amber-950">RepuBoost™</span></span>
         </div>
-        <Link
-          href={`/portal?shop=${encodeURIComponent(slug)}`}
-          className="text-[11px] text-amber-900/50 hover:text-amber-950 underline transition-colors flex items-center gap-1"
-        >
-          <span>Store Management Portal</span>
-          <ArrowRight className="w-2.5 h-2.5" />
-        </Link>
       </footer>
     </div>
   );
