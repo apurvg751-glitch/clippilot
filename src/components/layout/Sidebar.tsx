@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Settings,
   Sparkles,
+  Scissors,
   HardDrive,
   CheckCircle,
   AlertTriangle,
@@ -28,6 +29,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'clipper', label: 'Mani Clips Studio', icon: Scissors, badge: 'MANI' },
   { id: 'library', label: 'Video Library', icon: Film },
   { id: 'publishing', label: 'Publishing Centre', icon: Send },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
@@ -65,6 +67,27 @@ export function Sidebar() {
             <p className="text-xs text-slate-400 font-medium">Creator Command Studio</p>
           </div>
         </div>
+      </div>
+
+      {/* RepuBoost Agency Quick Switch */}
+      <div className="px-3.5 pt-3 pb-1">
+        <a
+          href="/repuboost"
+          className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 hover:border-amber-400 text-xs text-amber-200 group transition-all shadow-md shadow-amber-500/5"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm">
+              ★
+            </div>
+            <div>
+              <div className="font-bold text-white flex items-center gap-1.5">
+                <span>RepuBoost Agency</span>
+              </div>
+              <p className="text-[10px] text-amber-400/90 font-medium">₹14,995/mo • Client OS</p>
+            </div>
+          </div>
+          <span className="text-amber-400 group-hover:translate-x-0.5 transition-transform text-sm font-bold">→</span>
+        </a>
       </div>
 
       {/* Main Navigation */}

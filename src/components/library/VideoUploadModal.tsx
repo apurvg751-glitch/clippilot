@@ -13,6 +13,8 @@ import {
 import { YoutubeIcon as Youtube, InstagramIcon as Instagram } from '@/components/common/PlatformIcons';
 import { PlatformType } from '@/types';
 
+import { saveVideoFile } from '@/lib/video-file-store';
+
 const THUMBNAIL_PRESETS = [
   {
     id: 'thumb_1',
@@ -37,7 +39,7 @@ const THUMBNAIL_PRESETS = [
 ];
 
 export function VideoUploadModal() {
-  const { isUploadModalOpen, setIsUploadModalOpen, addVideo } = useStore();
+  const { isUploadModalOpen, setIsUploadModalOpen, addVideo, addToast, setActiveTab } = useStore();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -49,13 +51,14 @@ export function VideoUploadModal() {
   const [status, setStatus] = useState<'draft' | 'ready'>('ready');
   
   // Platform custom captions tab
-  const [activeTab, setActiveTab] = useState<PlatformType>('youtube');
+  const [activePlatformTab, setActivePlatformTab] = useState<PlatformType>('youtube');
   const [ytTitle, setYtTitle] = useState('');
   const [ytCaption, setYtCaption] = useState('');
   const [igCaption, setIgCaption] = useState('');
   const [ttCaption, setTtCaption] = useState('');
 
   const [dragActive, setDragActive] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
   if (!isUploadModalOpen) return null;
@@ -87,6 +90,7 @@ export function VideoUploadModal() {
   };
 
   const processFile = (file: File) => {
+    setUploadedFile(file);
     setUploadedFileName(file.name);
     // Auto populate title if blank
     if (!title) {
@@ -99,6 +103,10 @@ export function VideoUploadModal() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!uploadedFile) {
+      addToast('error', 'Please attach a real MP4 video file, or use Mani Clips Studio to generate a clip from a YouTube URL.');
+      return;
+    }
     if (!title.trim()) return;
 
     const tags = tagsInput
@@ -106,36 +114,43 @@ export function VideoUploadModal() {
       .map((t) => t.trim().replace(/^#/, ''))
       .filter(Boolean);
 
-    addVideo({
-      title,
-      description: description || 'Vertical video clip ready for multi-channel distribution.',
-      tags: tags.length > 0 ? tags : ['shorts', 'creator', 'viral'],
-      thumbnailUrl: selectedThumbnail,
-      durationSeconds: Number(duration) || 30,
-      fileSizeMb: Number(fileSize) || 25,
-      aspectRatio,
-      status,
-      platformCaptions: {
-        youtube: {
-          title: ytTitle || `${title} #Shorts`,
-          caption: ytCaption || description,
-          hashtags: ['#Shorts', '#Creator'],
-        },
-        instagram: {
-          caption: igCaption || `${description}\n\n#reels #creator #trending`,
-          hashtags: ['#reels', '#creator'],
-        },
-        tiktok: {
-          caption: ttCaption || `${title} #fyp #viral`,
-          hashtags: ['#fyp', '#viral'],
+    const newVideoId = addVideo(
+      {
+        title,
+        description: description || 'Vertical video clip ready for multi-channel distribution.',
+        tags: tags.length > 0 ? tags : ['shorts', 'creator', 'viral'],
+        thumbnailUrl: selectedThumbnail,
+        durationSeconds: Number(duration) || 30,
+        fileSizeMb: Number(fileSize) || 25,
+        aspectRatio,
+        status,
+        platformCaptions: {
+          youtube: {
+            title: ytTitle || `${title} #Shorts`,
+            caption: ytCaption || description,
+            hashtags: ['#Shorts', '#Creator'],
+          },
+          instagram: {
+            caption: igCaption || `${description}\n\n#reels #creator #trending`,
+            hashtags: ['#reels', '#creator'],
+          },
+          tiktok: {
+            caption: ttCaption || `${title} #fyp #viral`,
+            hashtags: ['#fyp', '#viral'],
+          },
         },
       },
-    });
+      uploadedFile
+    );
+
+    saveVideoFile(newVideoId, uploadedFile);
+    addToast('success', `Added real video "${title}" to your Library!`);
 
     // Reset and close
     setTitle('');
     setDescription('');
     setTagsInput('');
+    setUploadedFile(null);
     setUploadedFileName(null);
     setIsUploadModalOpen(false);
   };
@@ -331,9 +346,9 @@ export function VideoUploadModal() {
               <div className="flex items-center gap-1 bg-[#121829] p-1 rounded-lg border border-[#212b45]">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('youtube')}
+                  onClick={() => setActivePlatformTab('youtube')}
                   className={`px-2.5 py-1 text-xs rounded-md font-medium flex items-center gap-1.5 transition-colors ${
-                    activeTab === 'youtube'
+                    activePlatformTab === 'youtube'
                       ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                       : 'text-slate-400 hover:text-white'
                   }`}
@@ -343,9 +358,9 @@ export function VideoUploadModal() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('instagram')}
+                  onClick={() => setActivePlatformTab('instagram')}
                   className={`px-2.5 py-1 text-xs rounded-md font-medium flex items-center gap-1.5 transition-colors ${
-                    activeTab === 'instagram'
+                    activePlatformTab === 'instagram'
                       ? 'bg-pink-500/20 text-pink-300 border border-pink-500/40'
                       : 'text-slate-400 hover:text-white'
                   }`}
@@ -355,9 +370,9 @@ export function VideoUploadModal() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('tiktok')}
+                  onClick={() => setActivePlatformTab('tiktok')}
                   className={`px-2.5 py-1 text-xs rounded-md font-medium flex items-center gap-1.5 transition-colors ${
-                    activeTab === 'tiktok'
+                    activePlatformTab === 'tiktok'
                       ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                       : 'text-slate-400 hover:text-white'
                   }`}
@@ -368,7 +383,7 @@ export function VideoUploadModal() {
               </div>
             </div>
 
-            {activeTab === 'youtube' && (
+            {activePlatformTab === 'youtube' && (
               <div className="space-y-2 bg-[#121829] p-3.5 rounded-xl border border-[#212b45]">
                 <input
                   type="text"
@@ -387,7 +402,7 @@ export function VideoUploadModal() {
               </div>
             )}
 
-            {activeTab === 'instagram' && (
+            {activePlatformTab === 'instagram' && (
               <div className="space-y-2 bg-[#121829] p-3.5 rounded-xl border border-[#212b45]">
                 <textarea
                   rows={3}
@@ -399,7 +414,7 @@ export function VideoUploadModal() {
               </div>
             )}
 
-            {activeTab === 'tiktok' && (
+            {activePlatformTab === 'tiktok' && (
               <div className="space-y-2 bg-[#121829] p-3.5 rounded-xl border border-[#212b45]">
                 <textarea
                   rows={2}

@@ -1,11 +1,11 @@
 {
-  "name": "ClipPilot — Video & Social Media Studio",
-  "short_name": "ClipPilot",
-  "description": "Personal short-form video clipping and multi-platform publishing studio",
+  "name": "RepuBoost — 5-Star Reputation Engine",
+  "short_name": "RepuBoost",
+  "description": "Local shop 5-star Google review growth and customer complaint management engine",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#090c15",
-  "theme_color": "#8b5cf6",
+  "background_color": "#0f172a",
+  "theme_color": "#f59e0b",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -15,27 +15,27 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["productivity", "video", "social", "utilities"],
+  "categories": ["business", "productivity", "utilities"],
   "shortcuts": [
     {
-      "name": "Upload Clip",
-      "short_name": "Upload",
-      "description": "Upload a new vertical clip to your library",
-      "url": "/?tab=library&action=upload",
+      "name": "Private Complaints Desk",
+      "short_name": "Complaints",
+      "description": "Resolve intercepted negative customer feedback privately",
+      "url": "/?tab=complaints",
       "icons": [{ "src": "/icons/icon.svg", "sizes": "192x192" }]
     },
     {
-      "name": "Publishing Centre",
-      "short_name": "Publish",
-      "description": "Dispatch videos to Shorts, Reels, and TikTok",
-      "url": "/?tab=publishing",
+      "name": "Client Roster",
+      "short_name": "Clients",
+      "description": "Manage active shop retainers and Google review links",
+      "url": "/?tab=roster",
       "icons": [{ "src": "/icons/icon.svg", "sizes": "192x192" }]
     },
     {
-      "name": "Content Planner",
-      "short_name": "Planner",
-      "description": "View calendar and idea pipeline",
-      "url": "/?tab=planner",
+      "name": "Acrylic Stand Studio",
+      "short_name": "Stands",
+      "description": "Generate high-resolution QR stands for clients",
+      "url": "/?tab=studio",
       "icons": [{ "src": "/icons/icon.svg", "sizes": "192x192" }]
     }
   ]

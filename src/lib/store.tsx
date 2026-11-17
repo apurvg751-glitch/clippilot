@@ -18,6 +18,7 @@ import {
   SAMPLE_CONTENT_IDEAS,
 } from '@/lib/sample-data';
 import { exportVideosToCSV, exportGrowthToCSV } from '@/lib/export-csv';
+import { saveVideoFile, getVideoFile } from '@/lib/video-file-store';
 
 export interface ToastMessage {
   id: string;
@@ -54,10 +55,10 @@ interface StoreContextType {
     platforms: PlatformType[],
     isNow: boolean,
     scheduledTime?: string
-  ) => void;
+  ) => Promise<void>;
   cancelPublishing: () => void;
   retryPublishing: (videoId: string, platform: PlatformType) => void;
-  addVideo: (video: Omit<VideoItem, 'id' | 'createdAt' | 'updatedAt' | 'posts'>) => void;
+  addVideo: (video: Omit<VideoItem, 'id' | 'createdAt' | 'updatedAt' | 'posts'>, file?: File | null) => string;
   updateVideo: (id: string, updates: Partial<VideoItem>) => void;
   deleteVideo: (id: string) => void;
   updatePlatformCaption: (
@@ -111,20 +112,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Ensure clean real data upon first load, wiping legacy mock seeds
   useEffect(() => {
     try {
-      const cleanFlag = localStorage.getItem('clippilot_clean_real_v2');
+      const cleanFlag = localStorage.getItem('clippilot_clean_real_v4');
       if (!cleanFlag) {
         localStorage.removeItem('clippilot_videos');
         localStorage.removeItem('clippilot_accounts');
         localStorage.removeItem('clippilot_ideas');
         localStorage.removeItem('clippilot_demomode');
-        localStorage.setItem('clippilot_clean_real_v2', 'true');
+        localStorage.setItem('clippilot_clean_real_v4', 'true');
         setVideos([]);
         setDailyAnalytics([]);
         setIdeas([]);
         setIsDemoMode(false);
       } else {
         const savedVideos = localStorage.getItem('clippilot_videos');
-        if (savedVideos) setVideos(JSON.parse(savedVideos));
+        if (savedVideos) {
+          const parsed: VideoItem[] = JSON.parse(savedVideos);
+          // Sanitize any legacy mock views
+          const sanitized = parsed.map((v) => ({
+            ...v,
+            posts: (v.posts || []).map((p) => {
+              if (p.externalUrl === 'https://youtube.com/shorts/live-sample') {
+                return { ...p, views: 0, likes: 0, comments: 0, shares: 0, engagementRate: 0 };
+              }
+              return p;
+            }),
+          }));
+          setVideos(sanitized);
+        }
 
         const savedAccounts = localStorage.getItem('clippilot_accounts');
         if (savedAccounts) setAccounts(JSON.parse(savedAccounts));
@@ -186,6 +200,53 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               };
             })
           );
+
+          if (data.videos && Array.isArray(data.videos) && data.videos.length > 0) {
+            const liveClips: VideoItem[] = data.videos.map((v: any) => ({
+              id: `yt_${v.id}`,
+              title: v.title,
+              description: v.description || '',
+              tags: ['Shorts', 'Viral', 'YouTube', 'Gaming'],
+              thumbnailUrl: v.thumbnailUrl || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&auto=format&fit=crop&q=80',
+              videoUrl: v.url || `https://youtube.com/shorts/${v.id}`,
+              durationSeconds: 30,
+              fileSizeMb: 22.1,
+              aspectRatio: '9:16',
+              status: 'published' as const,
+              createdAt: v.publishedAt || new Date().toISOString(),
+              updatedAt: v.publishedAt || new Date().toISOString(),
+              platformCaptions: {
+                youtube: {
+                  title: v.title,
+                  caption: v.description || '',
+                  hashtags: ['#Shorts', '#Viral', '#MASTERDOM'],
+                },
+              },
+              posts: [
+                {
+                  id: `post_yt_${v.id}`,
+                  videoId: `yt_${v.id}`,
+                  platform: 'youtube' as const,
+                  externalPostId: v.id,
+                  externalUrl: v.url || `https://youtube.com/shorts/${v.id}`,
+                  caption: v.description || '',
+                  publishedAt: v.publishedAt || new Date().toISOString(),
+                  status: 'published' as const,
+                  views: Number(v.views) || 0,
+                  likes: Number(v.likes) || 0,
+                  comments: Number(v.comments) || 0,
+                  engagementRate: v.views > 0 ? Number((((v.likes + v.comments) / v.views) * 100).toFixed(1)) : 0,
+                },
+              ],
+            }));
+
+            setVideos((prev) => {
+              const liveIds = new Set(liveClips.map((lc) => lc.posts[0]?.externalPostId));
+              const others = prev.filter((p) => !p.posts.some((post) => liveIds.has(post.externalPostId)));
+              return [...liveClips, ...others];
+            });
+          }
+
           setIsDemoMode(false);
         }
       })
@@ -235,16 +296,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     addToast('success', 'Reset dashboard to fresh sample data.');
   };
 
-  const addVideo = (videoData: Omit<VideoItem, 'id' | 'createdAt' | 'updatedAt' | 'posts'>) => {
+  const addVideo = (
+    videoData: Omit<VideoItem, 'id' | 'createdAt' | 'updatedAt' | 'posts'>,
+    file?: File | null
+  ): string => {
+    const newVideoId = `vid_${Date.now()}`;
     const newVideo: VideoItem = {
       ...videoData,
-      id: `vid_${Date.now()}`,
+      id: newVideoId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       posts: [],
     };
+    if (file) {
+      saveVideoFile(newVideoId, file);
+    }
     setVideos((prev) => [newVideo, ...prev]);
     addToast('success', `Added "${videoData.title}" to Video Library`);
+    return newVideoId;
   };
 
   const updateVideo = (id: string, updates: Partial<VideoItem>) => {
@@ -332,12 +401,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     addToast('success', `Refreshed metrics for ${accounts.find((a) => a.id === accountId)?.platformName}`);
   };
 
-  const startPublishing = (
+  const startPublishing = async (
     videoId: string,
     platforms: PlatformType[],
     isNow: boolean,
     scheduledTime?: string
-  ) => {
+  ): Promise<void> => {
     const video = videos.find((v) => v.id === videoId);
     if (!video) {
       addToast('error', 'Select a video first.');
@@ -367,6 +436,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             views: 0,
             likes: 0,
             comments: 0,
+            shares: 0,
             engagementRate: 0,
           }));
           return {
@@ -382,80 +452,124 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Immediate publishing simulation with multi-stage progress
-    setPublishingJob({
-      videoId,
-      selectedPlatforms: platforms,
-      publishNow: isNow,
-      progress: 5,
-      stageMessage: 'Validating media specifications and container formats...',
-      isPublishing: true,
-    });
+    // Immediate Real Publishing
+    if (platforms.includes('youtube')) {
+      const videoFile = getVideoFile(videoId);
+      if (!videoFile) {
+        addToast(
+          'error',
+          'No MP4 video file attached! Please attach a video file before uploading to YouTube Shorts.'
+        );
+        return;
+      }
 
-    const stages = [
-      { progress: 25, message: 'Transcoding 9:16 vertical stream & optimizing audio bitrate...' },
-      { progress: 50, message: 'Requesting upload sessions from official platform APIs...' },
-      { progress: 75, message: 'Transferring video chunks to media endpoints...' },
-      { progress: 95, message: 'Finalizing post containers and applying hashtags...' },
-      { progress: 100, message: 'Verified! All platforms confirmed successful publication.' },
-    ];
+      setPublishingJob({
+        videoId,
+        selectedPlatforms: platforms,
+        publishNow: isNow,
+        progress: 15,
+        stageMessage: 'Initiating upload session with Google YouTube Data API v3...',
+        isPublishing: true,
+      });
 
-    stages.forEach((st, idx) => {
-      setTimeout(() => {
+      try {
+        const formData = new FormData();
+        formData.append('title', video.platformCaptions.youtube?.title || video.title);
+        formData.append('description', video.platformCaptions.youtube?.caption || video.description);
+        formData.append('tags', (video.tags || []).join(', '));
+        formData.append('video', videoFile);
+
         setPublishingJob((prev) => ({
           ...prev,
-          progress: st.progress,
-          stageMessage: st.message,
+          progress: 45,
+          stageMessage: 'Streaming video binary to YouTube Resumable Upload endpoint...',
         }));
 
-        if (st.progress === 100) {
-          setTimeout(() => {
-            setVideos((prev) =>
-              prev.map((v) => {
-                if (v.id !== videoId) return v;
-                const newPosts = platforms.map((p) => ({
-                  id: `post_${Date.now()}_${p}`,
-                  videoId,
-                  platform: p,
-                  externalPostId: `live_${Math.random().toString(36).substring(2, 9)}`,
-                  externalUrl:
-                    p === 'youtube'
-                      ? 'https://youtube.com/shorts/live-sample'
-                      : p === 'instagram'
-                      ? 'https://instagram.com/reel/live-sample'
-                      : 'https://tiktok.com/@alexrivera/live-sample',
-                  caption: v.platformCaptions[p]?.caption || v.description,
-                  publishedAt: new Date().toISOString(),
-                  status: 'published' as const,
-                  views: 12,
-                  likes: 2,
-                  comments: 0,
-                  shares: 0,
-                  engagementRate: 16.6,
-                }));
-                return {
-                  ...v,
-                  status: 'published',
-                  posts: [...v.posts.filter((post) => !platforms.includes(post.platform)), ...newPosts],
-                };
-              })
-            );
+        const res = await fetch('/api/youtube/upload', {
+          method: 'POST',
+          body: formData,
+        });
 
-            setPublishingJob({
-              videoId: '',
-              selectedPlatforms: [],
-              publishNow: true,
-              progress: 0,
-              stageMessage: '',
-              isPublishing: false,
-            });
+        const data = await res.json();
 
-            addToast('success', `Published "${video.title}" to ${platforms.join(', ')}!`);
-            setActiveTab('analytics');
-          }, 1200);
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || data.error || 'YouTube upload failed');
         }
-      }, (idx + 1) * 900);
-    });
+
+        const uploadedVideoId = data.video.videoId;
+        const uploadedVideoUrl = data.video.videoUrl || `https://youtube.com/shorts/${uploadedVideoId}`;
+
+        setPublishingJob((prev) => ({
+          ...prev,
+          progress: 100,
+          stageMessage: 'Upload verified! Short is live on YouTube.',
+        }));
+
+        const ytPost = {
+          id: `post_${Date.now()}_youtube`,
+          videoId,
+          platform: 'youtube' as PlatformType,
+          externalPostId: uploadedVideoId,
+          externalUrl: uploadedVideoUrl,
+          caption: video.platformCaptions.youtube?.caption || video.description,
+          publishedAt: new Date().toISOString(),
+          status: 'published' as const,
+          views: 0,
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          engagementRate: 0,
+        };
+
+        const otherPlatforms = platforms.filter((p) => p !== 'youtube');
+        if (otherPlatforms.length > 0) {
+          addToast(
+            'info',
+            `${otherPlatforms.join(', ')}: Developer partner approval pending. YouTube Short uploaded directly.`
+          );
+        }
+
+        setVideos((prev) =>
+          prev.map((v) => {
+            if (v.id !== videoId) return v;
+            return {
+              ...v,
+              status: 'published',
+              posts: [...v.posts.filter((post) => post.platform !== 'youtube'), ytPost],
+            };
+          })
+        );
+
+        addToast('success', `Live on YouTube Shorts: ${uploadedVideoUrl}`);
+
+        setTimeout(() => {
+          setPublishingJob({
+            videoId: '',
+            selectedPlatforms: [],
+            publishNow: true,
+            progress: 0,
+            stageMessage: '',
+            isPublishing: false,
+          });
+          setActiveTab('overview');
+        }, 1200);
+      } catch (err: any) {
+        setPublishingJob({
+          videoId: '',
+          selectedPlatforms: [],
+          publishNow: true,
+          progress: 0,
+          stageMessage: '',
+          isPublishing: false,
+        });
+        addToast('error', `YouTube upload error: ${err.message}`);
+      }
+    } else {
+      addToast(
+        'error',
+        'Direct upload is currently enabled for YouTube Shorts. Instagram Reels and TikTok require approved developer API credentials.'
+      );
+    }
   };
 
   const cancelPublishing = () => {

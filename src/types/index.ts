@@ -103,6 +103,7 @@ export interface PublishingJob {
 
 export type NavigationTab = 
   | 'overview' 
+  | 'clipper'
   | 'library' 
   | 'publishing' 
   | 'analytics' 
@@ -110,3 +111,5 @@ export type NavigationTab =
   | 'growth' 
   | 'planner' 
   | 'settings';
+
+export * from './repuboost';

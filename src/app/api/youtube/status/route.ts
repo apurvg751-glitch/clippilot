@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMyChannelData } from '@/lib/youtube';
+import { getMyChannelData, getChannelVideos } from '@/lib/youtube';
 import { readStoredSession, writeStoredSession, getActiveYouTubeToken } from '@/lib/youtube-session';
 
 export async function GET(req: NextRequest) {
@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
 
   let liveVerified = false;
   let apiPingLatencyMs: number | null = null;
+  let liveVideos: any[] = [];
 
   if (activeToken) {
     try {
@@ -58,14 +59,28 @@ export async function GET(req: NextRequest) {
       apiPingLatencyMs = Date.now() - start;
       liveVerified = true;
 
+      // Fetch individual uploaded videos and their live view counts
+      if (freshChannel.uploadsPlaylistId) {
+        try {
+          liveVideos = await getChannelVideos(activeToken, freshChannel.uploadsPlaylistId);
+        } catch (vErr: any) {
+          console.warn('Could not fetch channel videos:', vErr.message);
+        }
+      }
+
+      // Sum up real-time views from video statistics
+      const liveVideoViews = liveVideos.reduce((sum: number, v: any) => sum + (v.views || 0), 0);
+      const computedTotalViews = Math.max(freshChannel.totalViews, liveVideoViews);
+      const computedVideoCount = Math.max(freshChannel.videoCount, liveVideos.length);
+
       session = writeStoredSession({
         channelId: freshChannel.channelId,
         title: freshChannel.title,
         handle: freshChannel.handle,
         avatarUrl: freshChannel.avatarUrl,
         subscribersCount: freshChannel.subscribersCount,
-        totalViews: freshChannel.totalViews,
-        videoCount: freshChannel.videoCount,
+        totalViews: computedTotalViews,
+        videoCount: computedVideoCount,
         connected: true,
         lastVerified: new Date().toISOString(),
       });
@@ -78,6 +93,7 @@ export async function GET(req: NextRequest) {
     configured: isConfigured,
     connected: Boolean(session?.connected),
     liveVerified,
+    videos: liveVideos,
     channel: session
       ? {
           channelId: session.channelId || 'UC_apurvg-p9m',
