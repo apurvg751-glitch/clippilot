@@ -117,28 +117,7 @@ function ReviewPageInner() {
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
   const redirectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Dynamic 1,200+ Natural Review Variations
-  const [dynamicChips, setDynamicChips] = useState<
-    Array<{ id: string; emoji: string; label: string; text: string }>
-  >([]);
-
-  const refreshDynamicSuggestions = (shopName?: string, category?: string) => {
-    const targetName = (shopName || business.name || 'this business').trim();
-    const targetCat = category || business.category;
-    const categoryTags = getPositiveTagsForCategory(targetCat);
-
-    const generated = categoryTags.slice(0, 3).map((tag) => {
-      const { reviewText } = generateRandomizedReviewText(targetName, [tag.id], targetCat);
-      return {
-        id: tag.id,
-        emoji: tag.emoji,
-        label: tag.label,
-        text: reviewText,
-      };
-    });
-
-    setDynamicChips(generated);
-  };
+  const positiveTags = getPositiveTagsForCategory(business.category);
 
   // Cleans up redirect timer on unmount
   useEffect(() => {
@@ -147,16 +126,22 @@ function ReviewPageInner() {
     };
   }, []);
 
-  const handleSelectDynamicChip = async (chip: { id: string; emoji: string; label: string; text: string }) => {
+  const handleSelectTopic = async (tagId: string) => {
     if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
-    setSelectedPositiveTag(chip.id);
-    setCopiedReviewText(chip.text);
+    setSelectedPositiveTag(tagId);
     setIsRedirecting(true);
 
-    // Silently copy to clipboard
-    await copyToClipboard(chip.text);
+    // STRICT TOPIC MAPPING GUARANTEE:
+    // If customer taps 'taste', strictly generate a review for 'taste' ONLY.
+    // If customer taps 'freshness', strictly generate a review for 'freshness' ONLY.
+    // If customer taps 'service', strictly generate a review for 'service' ONLY.
+    const { reviewText } = generateRandomizedReviewText(business.name, [tagId], business.category);
+    setCopiedReviewText(reviewText);
 
-    // Non-blocking background tracking: positive_redirects (Only if active)
+    // Silently & ultra-fast copy to clipboard
+    await copyToClipboard(reviewText);
+
+    // Non-blocking background tracking: positive_redirects
     if (business.subscription_status !== 'paused') {
       try {
         fetch('/api/repuboost', {
@@ -173,20 +158,13 @@ function ReviewPageInner() {
       } catch {}
     }
 
-    // 1.8-second auto-redirect countdown
+    // Ultra-fast 1.1s redirect to Google Maps
     redirectTimerRef.current = setTimeout(() => {
       const rawDest = cleanGoogleReviewUrl(business.google_review_url);
       const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.city || ''))}`;
       const finalDestination = rawDest.startsWith('https://') ? rawDest : fallbackUrl;
       window.location.href = finalDestination;
-    }, 1800);
-  };
-
-  const handleUpdateCopiedText = async (newText: string) => {
-    if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
-    setIsRedirecting(false);
-    setCopiedReviewText(newText);
-    await copyToClipboard(newText);
+    }, 1100);
   };
 
   const handleDirectRatingOnly = (e?: React.MouseEvent) => {
@@ -221,7 +199,6 @@ function ReviewPageInner() {
     if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
     setIsRedirecting(true);
 
-    // Non-blocking background tracking: positive_redirects
     if (business.subscription_status !== 'paused') {
       try {
         fetch('/api/repuboost', {
@@ -278,7 +255,6 @@ function ReviewPageInner() {
             subscription_status: matched.subscription_status || 'trial',
           });
           setIsNotFound(false);
-          refreshDynamicSuggestions(matched.name, matched.category);
 
           // NON-BLOCKING BACKGROUND TRACKING: total_scans (Once per session, never when paused)
           if (matched.subscription_status !== 'paused' && typeof window !== 'undefined') {
@@ -331,7 +307,6 @@ function ReviewPageInner() {
       setSelectedPositiveTag(null);
       setCopiedReviewText('');
       setIsRedirecting(false);
-      refreshDynamicSuggestions(business.name, business.category);
     } else {
       setStage('negative');
     }
@@ -646,7 +621,7 @@ function ReviewPageInner() {
               </div>
             )}
 
-            {/* STAGE 2: 4-5 STARS -> DYNAMIC 1,200+ COMPLIMENT ENGINE & GOOGLE MAPS LAUNCH */}
+            {/* STAGE 2: 4-5 STARS -> FAST 1-TAP TOPIC SELECTION & GOOGLE MAPS AUTO-LAUNCH */}
             {stage === 'positive' && (
               <div className="text-center space-y-4 py-2 animate-in fade-in zoom-in-95 duration-200">
                 <div className="relative w-16 h-16 mx-auto">
@@ -663,117 +638,75 @@ function ReviewPageInner() {
                   </div>
                   <h2 className="text-xl sm:text-2xl font-extrabold text-amber-950">Thank you so much!</h2>
                   <p className="text-xs sm:text-sm font-semibold text-amber-900/90 mt-1 max-w-sm mx-auto">
-                    Tap a topic below to copy a fresh, authentic review ready to paste on Google:
+                    What did you love most? Tap an option to copy & open Google:
                   </p>
                 </div>
 
-                {/* DYNAMIC 1,200+ CATEGORY-TAILORED REVIEW CARDS */}
+                {/* 3 CLEAN TOPIC CARDS (No long paragraphs - customer knows instantly what they are choosing) */}
                 <div className="flex flex-col gap-2.5 max-w-md mx-auto pt-1">
-                  {dynamicChips.map((chip) => {
-                    const isSelected = selectedPositiveTag === chip.id;
+                  {positiveTags.map((tag) => {
+                    const isSelected = selectedPositiveTag === tag.id;
                     return (
                       <button
-                        key={chip.id}
+                        key={tag.id}
                         type="button"
-                        onClick={() => handleSelectDynamicChip(chip)}
-                        className={`w-full p-3.5 rounded-2xl text-left border transition-all flex flex-col gap-1.5 active:scale-[0.98] group cursor-pointer ${
+                        onClick={() => handleSelectTopic(tag.id)}
+                        disabled={isRedirecting && isSelected}
+                        className={`w-full py-3.5 px-4 rounded-2xl text-left border transition-all flex items-center justify-between gap-3 active:scale-[0.98] group cursor-pointer ${
                           isSelected
                             ? 'bg-emerald-600 text-white border-emerald-700 shadow-lg shadow-emerald-700/30 ring-2 ring-emerald-400 scale-[1.01]'
                             : 'bg-amber-50/90 hover:bg-amber-100/90 border-amber-200/90 text-amber-950 hover:shadow-md'
                         }`}
                       >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-extrabold text-xs sm:text-sm flex items-center gap-1.5">
-                            <span>{chip.emoji}</span>
-                            <span>{chip.label}</span>
-                          </span>
-                          <span
-                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 flex items-center gap-1 transition-colors ${
-                              isSelected
-                                ? 'bg-emerald-800 text-white border border-emerald-400'
-                                : 'bg-amber-200/70 text-amber-900 group-hover:bg-amber-200'
-                            }`}
-                          >
-                            {isSelected ? (
-                              <>
-                                <Check className="w-3 h-3 text-white" />
-                                <span>Copied!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3 h-3 text-amber-800" />
-                                <span>Tap to copy</span>
-                              </>
-                            )}
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-xl">{tag.emoji}</span>
+                          <span className="font-extrabold text-sm sm:text-base">
+                            {tag.label}
                           </span>
                         </div>
-                        <p
-                          className={`text-[12px] leading-relaxed italic ${
-                            isSelected ? 'text-emerald-50 font-medium' : 'text-amber-900/80 font-normal'
+                        <span
+                          className={`text-xs font-bold px-3 py-1.5 rounded-xl shrink-0 flex items-center gap-1.5 transition-colors ${
+                            isSelected
+                              ? 'bg-emerald-800 text-white border border-emerald-400'
+                              : 'bg-amber-200/70 text-amber-900 group-hover:bg-amber-200'
                           }`}
                         >
-                          "{chip.text}"
-                        </p>
+                          {isSelected ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-white" />
+                              <span>Copied! Opening...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-amber-800" />
+                              <span>Tap to Open →</span>
+                            </>
+                          )}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* SHUFFLE FRESH SUGGESTIONS BUTTON */}
-                <div className="flex items-center justify-center pt-0.5">
-                  <button
-                    type="button"
-                    onClick={() => refreshDynamicSuggestions()}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-amber-300/80 bg-amber-100/70 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors cursor-pointer shadow-sm active:scale-95"
-                  >
-                    <Shuffle className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Shuffle new ideas 🎲</span>
-                  </button>
-                </div>
-
-                {/* EDITABLE REVIEW PREVIEW (When a chip is tapped) */}
-                {copiedReviewText && (
-                  <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 shadow-sm space-y-2.5 animate-in fade-in duration-150 max-w-md mx-auto text-left">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                {/* AUTO-REDIRECT PROGRESS BAR & FAST LAUNCH */}
+                {isRedirecting && (
+                  <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 shadow-sm space-y-1.5 animate-in fade-in duration-150 max-w-md mx-auto">
+                    <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                      <span className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Copied to Clipboard! Ready to paste:</span>
+                        <span>Review copied! Opening Google Maps...</span>
                       </span>
-                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                        Tap to edit
-                      </span>
-                    </div>
-
-                    <textarea
-                      value={copiedReviewText}
-                      onChange={(e) => handleUpdateCopiedText(e.target.value)}
-                      rows={2}
-                      className="w-full p-2.5 rounded-xl bg-white border border-emerald-300 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner resize-none"
-                      placeholder="Review text copied to clipboard..."
-                    />
-
-                    <div className="flex items-center justify-between gap-2 pt-1">
                       <button
                         type="button"
                         onClick={handleProceedDirectly}
-                        className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-700/20 active:scale-95 transition-all cursor-pointer"
+                        className="text-[11px] font-bold text-emerald-800 underline hover:text-emerald-950"
                       >
-                        <span>Open Google Maps & Paste Review</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        Open Now →
                       </button>
                     </div>
-
-                    {isRedirecting && (
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-[11px] text-emerald-800 font-medium">
-                          <span>Opening Google Maps...</span>
-                          <span>Auto-launch</span>
-                        </div>
-                        <div className="w-full bg-emerald-200/80 rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-emerald-600 h-full w-full animate-progress-fast" />
-                        </div>
-                      </div>
-                    )}
+                    <div className="w-full bg-emerald-200/80 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-emerald-600 h-full w-full animate-progress-fast" />
+                    </div>
                   </div>
                 )}
 
