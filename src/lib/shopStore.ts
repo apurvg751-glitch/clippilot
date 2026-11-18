@@ -208,6 +208,22 @@ export function saveLocalShops(shops: Shop[]): void {
   }
 }
 
+// In-Memory Micro-Cache for zero-latency repetitive scans (45s TTL)
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const shopCacheBySlug = new Map<string, CacheEntry<Shop | null>>();
+const CACHE_TTL_MS = 45 * 1000;
+
+export function invalidateShopCache(slug?: string) {
+  if (slug) {
+    shopCacheBySlug.delete(slug.toLowerCase().trim());
+  } else {
+    shopCacheBySlug.clear();
+  }
+}
+
 /**
  * Fetch all shops from Supabase or local store using supabaseAdmin.
  * Strictly uses Supabase when configured with ZERO fallback to local storage.
@@ -215,23 +231,12 @@ export function saveLocalShops(shops: Shop[]): void {
 export async function getAllShops(): Promise<Shop[]> {
   if (isSupabaseConfigured()) {
     try {
-      // 1. Try querying 'shops' table
-      const { data: shopsData, error: shopsErr } = await supabaseAdmin
-        .from('shops')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!shopsErr && shopsData && shopsData.length > 0) {
-        return shopsData.map(normalizeShop);
-      }
-
-      // 2. Query 'businesses' table (active live table in Supabase)
+      // Direct query to businesses table (the active live table in Supabase)
       const { data: bizData, error: bizErr } = await supabaseAdmin
         .from('businesses')
         .select('*')
         .order('created_at', { ascending: false });
 
-      // If query was successful (even with 0 businesses because all were deleted), return the exact array!
       if (!bizErr && Array.isArray(bizData)) {
         return bizData.map(normalizeShop);
       }
@@ -252,20 +257,15 @@ export async function getAllShops(): Promise<Shop[]> {
 export async function getShopBySlug(slug: string): Promise<Shop | null> {
   const cleanSlug = slug.trim().toLowerCase();
 
+  // 1. Fast in-memory cache check (<1ms)
+  const cached = shopCacheBySlug.get(cleanSlug);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   if (isSupabaseConfigured()) {
     try {
-      // 1. Try shops table
-      const { data: shop, error: shopErr } = await supabaseAdmin
-        .from('shops')
-        .select('*')
-        .eq('slug', cleanSlug)
-        .maybeSingle();
-
-      if (!shopErr && shop) {
-        return normalizeShop(shop);
-      }
-
-      // 2. Try businesses table
+      // 2. Direct query to businesses table (zero missing-table penalty)
       const { data: biz, error: bizErr } = await supabaseAdmin
         .from('businesses')
         .select('*')
@@ -273,7 +273,9 @@ export async function getShopBySlug(slug: string): Promise<Shop | null> {
         .maybeSingle();
 
       if (!bizErr) {
-        return biz ? normalizeShop(biz) : null;
+        const result = biz ? normalizeShop(biz) : null;
+        shopCacheBySlug.set(cleanSlug, { data: result, timestamp: Date.now() });
+        return result;
       }
     } catch (err) {
       console.warn(`Supabase getShopBySlug(${cleanSlug}) failed:`, err);
@@ -334,11 +336,8 @@ export async function verifyShopPortalAuth(identifier: string, pin: string): Pro
 export async function getShopById(id: string): Promise<Shop | null> {
   if (isSupabaseConfigured()) {
     try {
-      const { data: shop, error: shopErr } = await supabaseAdmin.from('shops').select('*').eq('id', id).maybeSingle();
-      if (!shopErr && shop) return normalizeShop(shop);
-
       const { data: biz, error: bizErr } = await supabaseAdmin.from('businesses').select('*').eq('id', id).maybeSingle();
-      if (!bizErr) return biz ? normalizeShop(biz) : null;
+      if (!bizErr && biz) return normalizeShop(biz);
     } catch (err) {
       console.warn(`Supabase getShopById(${id}) failed:`, err);
     }
@@ -359,13 +358,6 @@ export async function getShopByRazorpaySubscriptionId(subId: string): Promise<Sh
 
   if (isSupabaseConfigured()) {
     try {
-      const { data: shop } = await supabaseAdmin
-        .from('shops')
-        .select('*')
-        .eq('razorpay_subscription_id', subId)
-        .maybeSingle();
-      if (shop) return normalizeShop(shop);
-
       const { data: biz } = await supabaseAdmin
         .from('businesses')
         .select('*')
@@ -481,32 +473,7 @@ export async function updateShopSubscription(
       console.warn('Supabase businesses update error:', err);
     }
 
-    // 2. Also try shops table if it exists
-    try {
-      let shopRes = null;
-      if (targetId) {
-        const { data } = await supabaseAdmin
-          .from('shops')
-          .update(updatedData)
-          .eq('id', targetId)
-          .select()
-          .maybeSingle();
-        shopRes = data;
-      }
-      if (!shopRes && targetSlug) {
-        const { data } = await supabaseAdmin
-          .from('shops')
-          .update(updatedData)
-          .eq('slug', targetSlug)
-          .select()
-          .maybeSingle();
-        shopRes = data;
-      }
-
-      if (shopRes && !updatedShop) {
-        updatedShop = normalizeShop(shopRes);
-      }
-    } catch {}
+    invalidateShopCache(targetSlug);
   }
 
   // 3. Update local file store
@@ -565,12 +532,11 @@ export async function deleteShop(
       if (targetId) {
         await supabaseAdmin.from('private_feedback').delete().eq('business_id', targetId);
         await supabaseAdmin.from('businesses').delete().eq('id', targetId);
-        await supabaseAdmin.from('shops').delete().eq('id', targetId);
       }
       if (targetSlug) {
         await supabaseAdmin.from('businesses').delete().eq('slug', targetSlug);
-        await supabaseAdmin.from('shops').delete().eq('slug', targetSlug);
       }
+      invalidateShopCache(targetSlug);
     } catch (err) {
       console.warn('Failed deleting shop from Supabase:', err);
     }
@@ -630,27 +596,25 @@ export async function createShop(data: {
   if (isSupabaseConfigured()) {
     try {
       const { data: dbData, error } = await supabaseAdmin
-        .from('shops')
-        .insert(newShopData)
+        .from('businesses')
+        .insert({
+          name: newShopData.name,
+          slug: newShopData.slug,
+          category: newShopData.category,
+          city: newShopData.city,
+          owner_name: newShopData.owner_name,
+          owner_phone: newShopData.owner_phone,
+          google_review_url: newShopData.google_review_url,
+          monthly_retainer: newShopData.monthly_retainer,
+          payment_status: newShopData.payment_status,
+        })
         .select()
         .single();
 
       if (!error && dbData) {
         created = normalizeShop(dbData);
       }
-
-      // Sync with businesses table if existing
-      await supabaseAdmin.from('businesses').insert({
-        name: newShopData.name,
-        slug: newShopData.slug,
-        category: newShopData.category,
-        city: newShopData.city,
-        owner_name: newShopData.owner_name,
-        owner_phone: newShopData.owner_phone,
-        google_review_url: newShopData.google_review_url,
-        monthly_retainer: newShopData.monthly_retainer,
-        payment_status: newShopData.payment_status,
-      });
+      invalidateShopCache(newShopData.slug);
     } catch (err) {
       console.warn('Supabase createShop failed, storing locally:', err);
     }
@@ -777,7 +741,6 @@ export async function incrementBusinessMetric(
       if (metric === 'positive_redirects') updatePayload.reviews_gained = updatedPositiveRedirects;
 
       await supabaseAdmin.from('businesses').update(updatePayload).eq('id', shop.id);
-      await supabaseAdmin.from('shops').update(updatePayload).eq('id', shop.id);
     } catch (err) {
       console.warn(`Supabase increment failed for ${slugOrId}:`, err);
     }

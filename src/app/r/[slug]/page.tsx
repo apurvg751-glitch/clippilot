@@ -29,6 +29,7 @@ import {
   Copy,
   Check,
   AlertTriangle,
+  Shuffle,
 } from 'lucide-react';
 
 interface BusinessInfo {
@@ -110,29 +111,52 @@ function ReviewPageInner() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // 1-Tap Positive Compliment & Direct Launch States (No shuffle friction - saves customer time)
+  // 1-Tap Positive Compliment & Direct Launch States
   const [selectedPositiveTag, setSelectedPositiveTag] = useState<string | null>(null);
-  const [selectedChip, setSelectedChip] = useState<string | null>(null);
   const [copiedReviewText, setCopiedReviewText] = useState<string>('');
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
   const redirectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const REVIEW_CHIPS = [
-    'Fast service & great quality!',
-    'Highly recommended!',
-    'Polite staff & clean place.',
-  ];
+  // Dynamic 1,200+ Natural Review Variations
+  const [dynamicChips, setDynamicChips] = useState<
+    Array<{ id: string; emoji: string; label: string; text: string }>
+  >([]);
 
-  const handleChipClick = async (chipText: string) => {
+  const refreshDynamicSuggestions = (shopName?: string, category?: string) => {
+    const targetName = (shopName || business.name || 'this business').trim();
+    const targetCat = category || business.category;
+    const categoryTags = getPositiveTagsForCategory(targetCat);
+
+    const generated = categoryTags.slice(0, 3).map((tag) => {
+      const { reviewText } = generateRandomizedReviewText(targetName, [tag.id], targetCat);
+      return {
+        id: tag.id,
+        emoji: tag.emoji,
+        label: tag.label,
+        text: reviewText,
+      };
+    });
+
+    setDynamicChips(generated);
+  };
+
+  // Cleans up redirect timer on unmount
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+    };
+  }, []);
+
+  const handleSelectDynamicChip = async (chip: { id: string; emoji: string; label: string; text: string }) => {
     if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
-    setSelectedChip(chipText);
-    setCopiedReviewText(chipText);
+    setSelectedPositiveTag(chip.id);
+    setCopiedReviewText(chip.text);
     setIsRedirecting(true);
 
-    // Write text to clipboard
-    await copyToClipboard(chipText);
+    // Silently copy to clipboard
+    await copyToClipboard(chip.text);
 
-    // Track positive redirect metric in background
+    // Non-blocking background tracking: positive_redirects (Only if active)
     if (business.subscription_status !== 'paused') {
       try {
         fetch('/api/repuboost', {
@@ -149,31 +173,27 @@ function ReviewPageInner() {
       } catch {}
     }
 
-    // 1.5-second timeout redirect to Google Maps
+    // 1.8-second auto-redirect countdown
     redirectTimerRef.current = setTimeout(() => {
       const rawDest = cleanGoogleReviewUrl(business.google_review_url);
       const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.city || ''))}`;
       const finalDestination = rawDest.startsWith('https://') ? rawDest : fallbackUrl;
       window.location.href = finalDestination;
-    }, 1500);
+    }, 1800);
   };
 
-  const positiveTags = getPositiveTagsForCategory(business.category);
-
-  // Cleans up redirect timer on unmount
-  useEffect(() => {
-    return () => {
-      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
-    };
-  }, []);
-
-  const handleSelectCompliment = async (tagId: string) => {
+  const handleUpdateCopiedText = async (newText: string) => {
     if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+    setIsRedirecting(false);
+    setCopiedReviewText(newText);
+    await copyToClipboard(newText);
+  };
 
-    setSelectedPositiveTag(tagId);
+  const handleDirectRatingOnly = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
     setIsRedirecting(true);
 
-    // Non-blocking background tracking: positive_redirects (Only if active)
     if (business.subscription_status !== 'paused') {
       try {
         fetch('/api/repuboost', {
@@ -187,25 +207,13 @@ function ReviewPageInner() {
           }),
           keepalive: true,
         }).catch(() => {});
-      } catch {
-        // Silently continue without delaying redirect
-      }
+      } catch {}
     }
 
-    // Behind-the-scenes randomization: 1 of 10+ variations + 12 sign-offs
-    const { reviewText } = generateRandomizedReviewText(business.name, [tagId], business.category);
-    setCopiedReviewText(reviewText);
-
-    // Silently copy to clipboard
-    await copyToClipboard(reviewText);
-
-    // Ultra-fast 1-second launch to Google Maps (saves customer's precious time)
-    redirectTimerRef.current = setTimeout(() => {
-      const rawDest = cleanGoogleReviewUrl(business.google_review_url);
-      const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.city || ''))}`;
-      const finalDestination = rawDest.startsWith('https://') ? rawDest : fallbackUrl;
-      window.location.href = finalDestination;
-    }, 1100);
+    const rawDest = cleanGoogleReviewUrl(business.google_review_url);
+    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.name + ' ' + (business.city || ''))}`;
+    const finalDestination = rawDest.startsWith('https://') ? rawDest : fallbackUrl;
+    window.location.href = finalDestination;
   };
 
   const handleProceedDirectly = (e?: React.MouseEvent) => {
@@ -270,6 +278,7 @@ function ReviewPageInner() {
             subscription_status: matched.subscription_status || 'trial',
           });
           setIsNotFound(false);
+          refreshDynamicSuggestions(matched.name, matched.category);
 
           // NON-BLOCKING BACKGROUND TRACKING: total_scans (Once per session, never when paused)
           if (matched.subscription_status !== 'paused' && typeof window !== 'undefined') {
@@ -322,6 +331,7 @@ function ReviewPageInner() {
       setSelectedPositiveTag(null);
       setCopiedReviewText('');
       setIsRedirecting(false);
+      refreshDynamicSuggestions(business.name, business.category);
     } else {
       setStage('negative');
     }
@@ -636,7 +646,7 @@ function ReviewPageInner() {
               </div>
             )}
 
-            {/* STAGE 2: 4-5 STARS -> 1-TAP REVIEW CHIPS & GOOGLE MAPS LAUNCH */}
+            {/* STAGE 2: 4-5 STARS -> DYNAMIC 1,200+ COMPLIMENT ENGINE & GOOGLE MAPS LAUNCH */}
             {stage === 'positive' && (
               <div className="text-center space-y-4 py-2 animate-in fade-in zoom-in-95 duration-200">
                 <div className="relative w-16 h-16 mx-auto">
@@ -652,87 +662,135 @@ function ReviewPageInner() {
                     <span>{rating}-Star Verified Experience</span>
                   </div>
                   <h2 className="text-xl sm:text-2xl font-extrabold text-amber-950">Thank you so much!</h2>
-                  <p className="text-sm font-semibold text-amber-900/90 mt-2 max-w-sm mx-auto">
-                    Tap a phrase to copy it, then paste it on Google!
+                  <p className="text-xs sm:text-sm font-semibold text-amber-900/90 mt-1 max-w-sm mx-auto">
+                    Tap a topic below to copy a fresh, authentic review ready to paste on Google:
                   </p>
                 </div>
 
-                {/* 1-TAP REVIEW CHIPS (User requested: 3 clickable Tailwind UI chips) */}
-                <div className="flex flex-col gap-2.5 max-w-md mx-auto pt-2">
-                  {REVIEW_CHIPS.map((chip, idx) => {
-                    const isSelected = selectedChip === chip;
+                {/* DYNAMIC 1,200+ CATEGORY-TAILORED REVIEW CARDS */}
+                <div className="flex flex-col gap-2.5 max-w-md mx-auto pt-1">
+                  {dynamicChips.map((chip) => {
+                    const isSelected = selectedPositiveTag === chip.id;
                     return (
                       <button
-                        key={idx}
+                        key={chip.id}
                         type="button"
-                        onClick={() => handleChipClick(chip)}
-                        disabled={isRedirecting && isSelected}
-                        className={`w-full py-3.5 px-4 rounded-2xl text-left border transition-all flex items-center justify-between gap-3 active:scale-[0.98] group cursor-pointer ${
+                        onClick={() => handleSelectDynamicChip(chip)}
+                        className={`w-full p-3.5 rounded-2xl text-left border transition-all flex flex-col gap-1.5 active:scale-[0.98] group cursor-pointer ${
                           isSelected
                             ? 'bg-emerald-600 text-white border-emerald-700 shadow-lg shadow-emerald-700/30 ring-2 ring-emerald-400 scale-[1.01]'
                             : 'bg-amber-50/90 hover:bg-amber-100/90 border-amber-200/90 text-amber-950 hover:shadow-md'
                         }`}
                       >
-                        <span className="flex-1 font-semibold text-xs sm:text-sm">"{chip}"</span>
-                        <span
-                          className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1.5 transition-colors ${
-                            isSelected
-                              ? 'bg-emerald-800 text-white border border-emerald-400'
-                              : 'bg-amber-200/70 text-amber-900 group-hover:bg-amber-200'
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-extrabold text-xs sm:text-sm flex items-center gap-1.5">
+                            <span>{chip.emoji}</span>
+                            <span>{chip.label}</span>
+                          </span>
+                          <span
+                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0 flex items-center gap-1 transition-colors ${
+                              isSelected
+                                ? 'bg-emerald-800 text-white border border-emerald-400'
+                                : 'bg-amber-200/70 text-amber-900 group-hover:bg-amber-200'
+                            }`}
+                          >
+                            {isSelected ? (
+                              <>
+                                <Check className="w-3 h-3 text-white" />
+                                <span>Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3 text-amber-800" />
+                                <span>Tap to copy</span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        <p
+                          className={`text-[12px] leading-relaxed italic ${
+                            isSelected ? 'text-emerald-50 font-medium' : 'text-amber-900/80 font-normal'
                           }`}
                         >
-                          {isSelected ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-white" />
-                              <span>Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3.5 h-3.5 text-amber-800" />
-                              <span>Tap to copy</span>
-                            </>
-                          )}
-                        </span>
+                          "{chip.text}"
+                        </p>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* REDIRECTING STATUS & TOAST */}
-                {isRedirecting && (
-                  <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 shadow-sm space-y-2 animate-in fade-in duration-150 max-w-md mx-auto">
+                {/* SHUFFLE FRESH SUGGESTIONS BUTTON */}
+                <div className="flex items-center justify-center pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => refreshDynamicSuggestions()}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-amber-300/80 bg-amber-100/70 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-colors cursor-pointer shadow-sm active:scale-95"
+                  >
+                    <Shuffle className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Shuffle new ideas 🎲</span>
+                  </button>
+                </div>
+
+                {/* EDITABLE REVIEW PREVIEW (When a chip is tapped) */}
+                {copiedReviewText && (
+                  <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 shadow-sm space-y-2.5 animate-in fade-in duration-150 max-w-md mx-auto text-left">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-900">
+                      <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Copied! Redirecting...</span>
-                      </div>
+                        <span>Copied to Clipboard! Ready to paste:</span>
+                      </span>
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        Tap to edit
+                      </span>
+                    </div>
+
+                    <textarea
+                      value={copiedReviewText}
+                      onChange={(e) => handleUpdateCopiedText(e.target.value)}
+                      rows={2}
+                      className="w-full p-2.5 rounded-xl bg-white border border-emerald-300 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner resize-none"
+                      placeholder="Review text copied to clipboard..."
+                    />
+
+                    <div className="flex items-center justify-between gap-2 pt-1">
                       <button
                         type="button"
                         onClick={handleProceedDirectly}
-                        className="text-[11px] font-bold text-emerald-800 underline hover:text-emerald-950 flex items-center gap-0.5"
+                        className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-700/20 active:scale-95 transition-all cursor-pointer"
                       >
-                        <span>Open Now</span>
-                        <ArrowRight className="w-3 h-3" />
+                        <span>Open Google Maps & Paste Review</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    {/* 1.5s Progress bar */}
-                    <div className="w-full bg-emerald-200/80 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-emerald-600 h-full w-full animate-progress-fast" />
-                    </div>
+                    {isRedirecting && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[11px] text-emerald-800 font-medium">
+                          <span>Opening Google Maps...</span>
+                          <span>Auto-launch</span>
+                        </div>
+                        <div className="w-full bg-emerald-200/80 rounded-full h-1.5 overflow-hidden">
+                          <div className="bg-emerald-600 h-full w-full animate-progress-fast" />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* DIRECT BYPASS OPTION */}
-                <div className="pt-2">
+                {/* ZERO-RISK DIRECT RATING BYPASS */}
+                <div className="pt-2 max-w-md mx-auto space-y-1.5">
                   <button
                     type="button"
-                    onClick={handleProceedDirectly}
-                    className="inline-flex items-center justify-center gap-1.5 w-full max-w-md py-2.5 px-3 rounded-xl border border-amber-300/80 bg-white/80 hover:bg-white text-amber-900 font-semibold text-xs transition-all hover:shadow-sm"
+                    onClick={handleDirectRatingOnly}
+                    className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl border border-amber-400 bg-gradient-to-r from-amber-400/20 to-yellow-400/20 hover:from-amber-400/30 hover:to-yellow-400/30 text-amber-950 font-bold text-xs transition-all shadow-sm cursor-pointer active:scale-95"
                   >
-                    <span>Or write your own review directly on Google Maps</span>
-                    <ExternalLink className="w-3 h-3 text-amber-700" />
+                    <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-600" />
+                    <span>Just Rate 5 Stars on Google (No review text needed) →</span>
                   </button>
+
+                  <p className="text-[11px] text-amber-900/60 font-medium text-center">
+                    Tap above to jump directly to Google Maps and submit your 5 stars in 2 seconds.
+                  </p>
                 </div>
               </div>
             )}
