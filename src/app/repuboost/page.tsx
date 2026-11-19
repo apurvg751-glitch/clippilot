@@ -2679,22 +2679,11 @@ export default function RepuBoostDashboard() {
                       Takes 5 seconds • No app download required
                     </p>
 
-                    <div
-                      className="mt-2.5 inline-block px-3 py-1 rounded-full text-[10px] font-bold"
-                      style={{
-                        backgroundColor: standTheme.accentBg,
-                        color: standTheme.accentText,
-                        border: `1px solid ${standTheme.accentBorder}`,
-                      }}
-                    >
-                      ⚡ 4★ & 5★ Boosted Directly to Google Maps
-                    </div>
-
                     <div className={`mt-4 pt-3 border-t flex items-center justify-center gap-1.5 text-[10px] ${
                       isLight ? 'border-slate-200 text-slate-500' : 'border-slate-800 text-slate-400'
                     }`}>
                       <Sparkles className="w-3 h-3 text-amber-500" />
-                      <span>RepuBoost™ • 4x6" Acrylic Table Stand</span>
+                      <span>RepuBoost™</span>
                     </div>
                   </div>
                 </div>

@@ -314,35 +314,18 @@ export async function generateStandCanvas(options: StandCanvasOptions): Promise<
   }
 
   // 10. Scan Instructions
-  ctx.font = '900 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '900 42px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.fillStyle = '#0f172a';
-  ctx.fillText('Scan with Any Phone Camera', 600, 1315);
+  ctx.fillText('Scan with Any Phone Camera', 600, 1370);
 
-  ctx.font = '500 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '500 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.fillStyle = '#64748b';
-  ctx.fillText('Takes 5 seconds • No app download required', 600, 1365);
+  ctx.fillText('Takes 5 seconds • No app download required', 600, 1430);
 
-  // 11. 100% Direct Google Boost & Privacy Interception Pill
-  const pillW = 680;
-  const pillX = (1200 - pillW) / 2;
-  const pillY = 1430;
-
-  ctx.fillStyle = theme.accentBg;
-  roundRect(ctx, pillX, pillY, pillW, 64, 32);
-  ctx.fill();
-  ctx.strokeStyle = theme.accentBorder;
-  ctx.lineWidth = 2;
-  roundRect(ctx, pillX, pillY, pillW, 64, 32);
-  ctx.stroke();
-
+  // 11. Footer Branding
   ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillStyle = theme.accentText;
-  ctx.fillText('⚡ 4★ & 5★ Boosted Directly to Google Maps', 600, pillY + 41);
-
-  // 12. Footer Security & Acrylic Branding
-  ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.fillStyle = '#94a3b8';
-  ctx.fillText('POWERED BY REPUBOOST™ • ACRYLIC TABLE STAND 4x6" INSERT', 600, 1680);
+  ctx.fillText('REPUBOOST™', 600, 1680);
 
   return canvas.toDataURL('image/png', 1.0);
 }

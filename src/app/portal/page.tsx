@@ -968,24 +968,12 @@ function PortalInner() {
                   Takes 5 seconds • No app download required
                 </p>
 
-                {/* Direct Google Boost Pill */}
-                <div
-                  className="mt-3 inline-block px-4 py-1.5 rounded-full text-xs font-bold"
-                  style={{
-                    backgroundColor: standTheme.accentBg,
-                    color: standTheme.accentText,
-                    border: `1px solid ${standTheme.accentBorder}`,
-                  }}
-                >
-                  ⚡ 4★ & 5★ Boosted Directly to Google Maps
-                </div>
-
                 {/* Footer Branding */}
                 <div className={`mt-5 pt-3 border-t flex items-center justify-center gap-1.5 text-[11px] font-semibold ${
                   isLight ? 'border-slate-200 text-slate-500' : 'border-slate-800 text-slate-400'
                 }`}>
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>RepuBoost™ • 4x6" Acrylic Table Stand</span>
+                  <span>RepuBoost™</span>
                 </div>
               </div>
 
