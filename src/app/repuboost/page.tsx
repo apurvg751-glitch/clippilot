@@ -2374,9 +2374,19 @@ export default function RepuBoostDashboard() {
                       {filteredFeedbacks.map((fb: any) => {
                         const clientMatch = clients.find(c => c.name === fb.business_name || c.id === fb.business_id || c.slug === fb.business_id || c.slug === fb.business_slug) || clients.find(c => c.name === fb.business_name);
                         const businessName = clientMatch?.name || fb.business_name || 'Management';
-                        const reviewLink = clientMatch?.google_review_url || 'https://www.google.com/maps';
+                        const storeSlug = clientMatch?.slug || fb.business_slug || fb.business_id || '';
+                        const shortStoreUrl = storeSlug ? `https://repoboost.vercel.app/r/${storeSlug}` : 'https://repoboost.vercel.app';
                         const catConfig = getCategoryConfig(clientMatch?.category || fb.business_category || '');
-                        const waText = `Hello ${fb.customer_name}, this is the management at ${businessName}. We sincerely apologize for your recent experience regarding: "${fb.complaint_text}". We have addressed this directly with our team regarding ${catConfig.industryTerm} and would love the opportunity to ${catConfig.apologyOffer}! Once you are satisfied with our resolution, we would truly appreciate if you could update your rating to 5-stars here: ${reviewLink}`;
+                        
+                        const cleanPhone = (fb.customer_contact || '').replace(/[^0-9]/g, '');
+                        const waTargetNumber = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
+                        const rawComplaint = (fb.complaint_text || 'your recent visit').trim();
+                        const cleanComplaint = rawComplaint.replace(/^\[Issues reported:\s*([^\]]+)\]\s*/i, '$1: ');
+
+                        const waTextEng = `Hi ${fb.customer_name}, team ${businessName} here.\n\nWe saw your feedback regarding: "${cleanComplaint}" and we are really sorry for the bad experience. We take this very seriously and are addressing it right away.\n\nOnce you're satisfied with how this is resolved, please help us with your updated rating here:\n🔗 ${shortStoreUrl}`;
+
+                        const waTextHinglish = `Hi ${fb.customer_name}! Team ${businessName} se message hai.\n\nAapne "${cleanComplaint}" ke baare mein jo feedback diya, uske liye really sorry. Humne isko note kar liya hai aur hum ise theek kar rahe hain.\n\nAgar aapko hamara response theek lage, toh please yahan tap karke apna updated rating share kar dijiyega:\n🔗 ${shortStoreUrl}`;
 
                         return (
                           <div
@@ -2447,15 +2457,29 @@ export default function RepuBoostDashboard() {
 
                             {/* Action Bar: WhatsApp Resolution, Resolve Toggle, Delete */}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 text-xs">
-                              <a
-                                href={`https://wa.me/${(fb.customer_contact || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waText)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all active:scale-95 shadow-sm shadow-emerald-600/20"
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                <span>Message on WhatsApp & Request 5★</span>
-                              </a>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <a
+                                  href={`https://wa.me/${waTargetNumber}?text=${encodeURIComponent(waTextEng)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all active:scale-95 shadow-sm shadow-emerald-600/20"
+                                  title="Open WhatsApp with English recovery message"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                  <span>WhatsApp (English)</span>
+                                </a>
+
+                                <a
+                                  href={`https://wa.me/${waTargetNumber}?text=${encodeURIComponent(waTextHinglish)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-bold transition-all active:scale-95 shadow-sm"
+                                  title="Open WhatsApp with Hinglish recovery message"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                  <span>Hinglish</span>
+                                </a>
+                              </div>
 
                               <div className="flex items-center gap-2 self-end sm:self-auto">
                                 <button

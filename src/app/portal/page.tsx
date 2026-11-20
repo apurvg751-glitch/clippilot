@@ -824,29 +824,51 @@ function PortalInner() {
                       </span>
 
                       <div className="flex items-center gap-2">
-                        {item.customer_contact && (
-                          <>
-                            <a
-                              href={`tel:${item.customer_contact.replace(/[^0-9+]/g, '')}`}
-                              className="px-2.5 py-1.5 rounded-lg border font-bold text-[11px] flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                            >
-                              <Phone className="w-3 h-3 text-emerald-500" />
-                              <span>Call</span>
-                            </a>
+                        {item.customer_contact && (() => {
+                          const cleanNum = item.customer_contact.replace(/[^0-9]/g, '');
+                          const waPhone = cleanNum.length === 10 ? `91${cleanNum}` : cleanNum;
+                          const storeSlug = authenticatedShop?.slug || '';
+                          const shortStoreUrl = storeSlug ? `https://repoboost.vercel.app/r/${storeSlug}` : 'https://repoboost.vercel.app';
+                          const rawComplaint = (item.complaint_text || 'your recent visit').trim();
+                          const cleanComplaint = rawComplaint.replace(/^\[Issues reported:\s*([^\]]+)\]\s*/i, '$1: ');
 
-                            <a
-                              href={`https://wa.me/${item.customer_contact.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                                `Namaste ${item.customer_name}, store management from ${authenticatedShop.name} here. We saw your feedback and apologize for any delay. We would love to make this right on your next visit!`
-                              )}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 transition-colors"
-                            >
-                              <MessageCircle className="w-3 h-3" />
-                              <span>WhatsApp</span>
-                            </a>
-                          </>
-                        )}
+                          const waEng = `Hi ${item.customer_name}, team ${authenticatedShop.name} here.\n\nWe saw your feedback regarding: "${cleanComplaint}" and we are really sorry for the bad experience. We take this very seriously and are addressing it right away.\n\nOnce you're satisfied with how this is resolved, please help us with your updated rating here:\n🔗 ${shortStoreUrl}`;
+
+                          const waHinglish = `Hi ${item.customer_name}! Team ${authenticatedShop.name} se message hai.\n\nAapne "${cleanComplaint}" ke baare mein jo feedback diya, uske liye really sorry. Humne isko note kar liya hai aur hum ise theek kar rahe hain.\n\nAgar aapko hamara response theek lage, toh please yahan tap karke apna updated rating share kar dijiyega:\n🔗 ${shortStoreUrl}`;
+
+                          return (
+                            <>
+                              <a
+                                href={`tel:${item.customer_contact.replace(/[^0-9+]/g, '')}`}
+                                className="px-2.5 py-1.5 rounded-lg border font-bold text-[11px] flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                              >
+                                <Phone className="w-3 h-3 text-emerald-500" />
+                                <span>Call</span>
+                              </a>
+
+                              <a
+                                href={`https://wa.me/${waPhone}?text=${encodeURIComponent(waEng)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 transition-colors"
+                                title="Open WhatsApp (English)"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                <span>WhatsApp</span>
+                              </a>
+
+                              <a
+                                href={`https://wa.me/${waPhone}?text=${encodeURIComponent(waHinglish)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2 py-1.5 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold text-[11px] flex items-center gap-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                                title="Open WhatsApp (Hinglish)"
+                              >
+                                <span>Hinglish</span>
+                              </a>
+                            </>
+                          );
+                        })()}
 
                         <button
                           onClick={() => handleResolveFeedback(item.id, item.status)}
