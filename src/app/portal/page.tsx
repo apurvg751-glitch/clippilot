@@ -830,11 +830,17 @@ function PortalInner() {
                           const storeSlug = authenticatedShop?.slug || '';
                           const shortStoreUrl = storeSlug ? `https://repoboost.vercel.app/r/${storeSlug}` : 'https://repoboost.vercel.app';
                           const rawComplaint = (item.complaint_text || 'your recent visit').trim();
-                          const cleanComplaint = rawComplaint.replace(/^\[Issues reported:\s*([^\]]+)\]\s*/i, '$1: ');
+                          let cleanComplaint = rawComplaint;
+                          const match = rawComplaint.match(/^\[Issues reported:\s*([^\]]+)\](?:\s*(.*))?$/i);
+                          if (match) {
+                            const tags = match[1].trim();
+                            const notes = (match[2] || '').trim();
+                            cleanComplaint = notes ? `${tags} (${notes})` : tags;
+                          }
 
-                          const waEng = `Hi ${item.customer_name}, team ${authenticatedShop.name} here.\n\nWe saw your feedback regarding: "${cleanComplaint}" and we are really sorry for the bad experience. We take this very seriously and are addressing it right away.\n\nOnce you're satisfied with how this is resolved, please help us with your updated rating here:\n🔗 ${shortStoreUrl}`;
+                          const waEng = `Hi ${item.customer_name}! 👋\nThis is team ${authenticatedShop.name}.\n\nThank you for your feedback. We sincerely apologize for the issue reported: "${cleanComplaint}". We have addressed this directly with our team to make it right.\n\nOnce the problem is resolved to your satisfaction, please take a quick second to update your rating here:\n🔗 ${shortStoreUrl}`;
 
-                          const waHinglish = `Hi ${item.customer_name}! Team ${authenticatedShop.name} se message hai.\n\nAapne "${cleanComplaint}" ke baare mein jo feedback diya, uske liye really sorry. Humne isko note kar liya hai aur hum ise theek kar rahe hain.\n\nAgar aapko hamara response theek lage, toh please yahan tap karke apna updated rating share kar dijiyega:\n🔗 ${shortStoreUrl}`;
+                          const waHinglish = `Hi ${item.customer_name}! 👋\nTeam ${authenticatedShop.name} se message hai.\n\nAapke feedback ke liye thank you. Aapne jo issue report kiya ("${cleanComplaint}"), uske liye really sorry. Humne isko note kar liya hai aur hum ise priority pe solve kar rahe hain.\n\nProblem solve hone ke baad agar aapko sab theek lage, toh please ek second nikaal kar apna rating yahan update kar dijiye:\n🔗 ${shortStoreUrl}`;
 
                           return (
                             <>

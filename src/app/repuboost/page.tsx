@@ -2354,11 +2354,17 @@ export default function RepuBoostDashboard() {
                         const waTargetNumber = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
                         const rawComplaint = (fb.complaint_text || 'your recent visit').trim();
-                        const cleanComplaint = rawComplaint.replace(/^\[Issues reported:\s*([^\]]+)\]\s*/i, '$1: ');
+                        let cleanComplaint = rawComplaint;
+                        const match = rawComplaint.match(/^\[Issues reported:\s*([^\]]+)\](?:\s*(.*))?$/i);
+                        if (match) {
+                          const tags = match[1].trim();
+                          const notes = (match[2] || '').trim();
+                          cleanComplaint = notes ? `${tags} (${notes})` : tags;
+                        }
 
-                        const waTextEng = `Hi ${fb.customer_name}, team ${businessName} here.\n\nWe saw your feedback regarding: "${cleanComplaint}" and we are really sorry for the bad experience. We take this very seriously and are addressing it right away.\n\nOnce you're satisfied with how this is resolved, please help us with your updated rating here:\n🔗 ${shortStoreUrl}`;
+                        const waTextEng = `Hi ${fb.customer_name}! 👋\nThis is team ${businessName}.\n\nThank you for your feedback. We sincerely apologize for the issue reported: "${cleanComplaint}". We have addressed this directly with our team to make it right.\n\nOnce the problem is resolved to your satisfaction, please take a quick second to update your rating here:\n🔗 ${shortStoreUrl}`;
 
-                        const waTextHinglish = `Hi ${fb.customer_name}! Team ${businessName} se message hai.\n\nAapne "${cleanComplaint}" ke baare mein jo feedback diya, uske liye really sorry. Humne isko note kar liya hai aur hum ise theek kar rahe hain.\n\nAgar aapko hamara response theek lage, toh please yahan tap karke apna updated rating share kar dijiyega:\n🔗 ${shortStoreUrl}`;
+                        const waTextHinglish = `Hi ${fb.customer_name}! 👋\nTeam ${businessName} se message hai.\n\nAapke feedback ke liye thank you. Aapne jo issue report kiya ("${cleanComplaint}"), uske liye really sorry. Humne isko note kar liya hai aur hum ise priority pe solve kar rahe hain.\n\nProblem solve hone ke baad agar aapko sab theek lage, toh please ek second nikaal kar apna rating yahan update kar dijiye:\n🔗 ${shortStoreUrl}`;
 
                         return (
                           <div
