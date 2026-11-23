@@ -6,6 +6,7 @@ import {
   deleteStoredFeedback,
   updateStoredFeedbackStatus,
 } from '@/lib/feedbackStore';
+import { parseJsonBody, safeInternalError, safeString } from '@/lib/apiSecurity';
 
 /**
  * RepuBoost Multi-Tenant Shopkeeper Portal API
@@ -114,12 +115,19 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const { data: body, error: parseErr } = await parseJsonBody(req);
+    if (parseErr || !body) {
+      return NextResponse.json(
+        { success: false, error: parseErr || 'Request body cannot be empty' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
     const { action } = body;
 
     // ACTION: login
     if (action === 'login') {
-      const { identifier, pin } = body;
+      const identifier = safeString(body.identifier, 100);
+      const pin = safeString(body.pin, 20);
       if (!identifier || !pin) {
         return NextResponse.json(
           { success: false, error: 'Please enter both Business ID and Access PIN' },
@@ -212,7 +220,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400, headers: corsHeaders });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Server Error';
-    return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders });
+    return safeInternalError(err, 'Portal API POST', corsHeaders);
   }
 }

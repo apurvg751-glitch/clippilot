@@ -294,9 +294,9 @@ export async function getShopBySlug(slug: string): Promise<Shop | null> {
  * Uses strict exact matching (===) ONLY - no loose .includes() checks.
  */
 export async function verifyShopPortalAuth(identifier: string, pin: string): Promise<Shop | null> {
-  const cleanId = (identifier || '').trim().toLowerCase();
+  const cleanId = typeof identifier === 'string' ? identifier.trim().toLowerCase() : '';
   const normalizedId = cleanId.replace(/[^a-z0-9]/g, '');
-  const cleanPin = (pin || '').trim().toUpperCase();
+  const cleanPin = typeof pin === 'string' ? pin.trim().toUpperCase() : typeof pin === 'number' ? String(pin).trim().toUpperCase() : '';
 
   if (!cleanId || !cleanPin) return null;
 
@@ -570,9 +570,12 @@ export async function createShop(data: {
   const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const status: SubscriptionStatus = data.subscription_status || 'trial';
 
+  const rawSlug = typeof data.slug === 'string' && data.slug.trim() ? data.slug : (data.name || 'shop');
+  const cleanSlug = rawSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+
   const newShopData = {
-    name: data.name,
-    slug: data.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'),
+    name: data.name || 'Untitled Shop',
+    slug: cleanSlug,
     category: data.category || 'Retail & General',
     city: data.city || 'Delhi',
     owner_name: data.owner_name,

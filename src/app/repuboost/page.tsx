@@ -150,9 +150,8 @@ export default function RepuBoostDashboard() {
   const [deletingShopId, setDeletingShopId] = useState<string | null>(null);
   const [statusFeedbackToast, setStatusFeedbackToast] = useState<{ message: string; type: 'success' | 'alert' } | null>(null);
 
-  // Master Admin Authentication State (Dynamic with localStorage custom password support)
-  const DEFAULT_ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'neymar';
-  const [activeAdminPassword, setActiveAdminPassword] = useState<string>(DEFAULT_ADMIN_PASSWORD);
+  // Master Admin Authentication State (Strict Server-Validated via ADMIN_PASSWORD)
+  const [adminKey, setAdminKey] = useState<string>('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
   const [inputPassword, setInputPassword] = useState<string>('');
@@ -161,11 +160,6 @@ export default function RepuBoostDashboard() {
 
   // Admin Change Password Modal State
   const [isAdminPasswordModalOpen, setIsAdminPasswordModalOpen] = useState<boolean>(false);
-  const [currentAdminPasswordInput, setCurrentAdminPasswordInput] = useState<string>('');
-  const [newAdminPasswordInput, setNewAdminPasswordInput] = useState<string>('');
-  const [confirmAdminPasswordInput, setConfirmAdminPasswordInput] = useState<string>('');
-  const [showNewAdminPassword, setShowNewAdminPassword] = useState<boolean>(false);
-  const [adminPasswordChangeError, setAdminPasswordChangeError] = useState<string | null>(null);
 
   // Client Store PIN Modal State (Admin only access)
   const [isStorePinModalOpen, setIsStorePinModalOpen] = useState<boolean>(false);
@@ -200,123 +194,104 @@ export default function RepuBoostDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Clear out any old legacy credentials from browser storage
-      const customPass = localStorage.getItem('repuboost_custom_admin_password');
-      if (customPass === 'cubarsi' || customPass === 'ularva12') {
-        localStorage.removeItem('repuboost_custom_admin_password');
-      }
-      const effectivePass = localStorage.getItem('repuboost_custom_admin_password') || 'neymar';
-      setActiveAdminPassword(effectivePass);
-
-      // Purge old demo/test feedback records from browser storage permanently
-      try {
-        const localFeedbacks = localStorage.getItem('repuboost_saved_feedbacks');
-        if (localFeedbacks) {
-          const list = JSON.parse(localFeedbacks);
-          if (Array.isArray(list)) {
-            const purged = list.filter((item: any) => !isDemoFeedbackRecord(item));
-            localStorage.setItem('repuboost_saved_feedbacks', JSON.stringify(purged));
-          }
-        }
-      } catch {}
-
-      const savedAuth = (sessionStorage.getItem('repuboost_admin_auth') || localStorage.getItem('repuboost_admin_auth') || '').trim().toLowerCase();
-      if (savedAuth === 'neymar' || (savedAuth && savedAuth === effectivePass.toLowerCase())) {
-        setIsAuthenticated(true);
-        sessionStorage.setItem('repuboost_admin_auth', 'neymar');
-        localStorage.setItem('repuboost_admin_auth', 'neymar');
-      } else {
-        sessionStorage.removeItem('repuboost_admin_auth');
-        localStorage.removeItem('repuboost_admin_auth');
-      }
-    }
-    setIsAuthChecking(false);
-  }, []);
-
   const getAdminHeaders = () => {
+    const key = adminKey || (typeof window !== 'undefined' ? (sessionStorage.getItem('repuboost_admin_key') || '') : '');
     return {
       'Content-Type': 'application/json',
-      'x-admin-key': 'neymar',
+      'x-admin-key': key,
     };
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = inputPassword.trim().toLowerCase();
-    const activeClean = activeAdminPassword.trim().toLowerCase();
+    const clean = inputPassword.trim();
+    if (!clean) {
+      setAuthError('Please enter the master admin password.');
+      return;
+    }
 
-    // STRICT: ONLY 'neymar' (or active custom password) is allowed. Old passwords like 'ularva12' and 'cubarsi' are rejected!
-    if (clean === 'neymar' || clean === activeClean) {
-      setIsAuthenticated(true);
-      setAuthError(null);
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('repuboost_admin_auth', 'neymar');
-        localStorage.setItem('repuboost_admin_auth', 'neymar');
-        localStorage.setItem('repuboost_custom_admin_password', 'neymar');
+    setIsAuthChecking(true);
+    setAuthError(null);
+
+    try {
+      const res = await fetch('/api/repuboost', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': clean,
+        },
+        body: JSON.stringify({ action: 'verify_admin', admin_password: clean }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.authorized) {
+        setAdminKey(clean);
+        setIsAuthenticated(true);
+        setAuthError(null);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('repuboost_admin_key', clean);
+        }
+      } else {
+        setAuthError('Incorrect master admin password. Access denied.');
       }
-      setActiveAdminPassword('neymar');
-    } else {
-      setAuthError('Incorrect admin password. Access denied.');
+    } catch {
+      setAuthError('Network error connecting to verification server.');
+    } finally {
+      setIsAuthChecking(false);
     }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    setAdminKey('');
     setInputPassword('');
     setAuthError(null);
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('repuboost_admin_auth');
+      sessionStorage.removeItem('repuboost_admin_key');
       localStorage.removeItem('repuboost_admin_auth');
-    }
-  };
-
-  const handleChangeAdminPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminPasswordChangeError(null);
-
-    if (currentAdminPasswordInput !== activeAdminPassword && currentAdminPasswordInput !== DEFAULT_ADMIN_PASSWORD) {
-      setAdminPasswordChangeError('Current password is incorrect.');
-      return;
-    }
-    if (newAdminPasswordInput.length < 6) {
-      setAdminPasswordChangeError('New password must be at least 6 characters.');
-      return;
-    }
-    if (newAdminPasswordInput !== confirmAdminPasswordInput) {
-      setAdminPasswordChangeError('New passwords do not match.');
-      return;
-    }
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('repuboost_custom_admin_password', newAdminPasswordInput);
-      sessionStorage.setItem('repuboost_admin_auth', newAdminPasswordInput);
-      localStorage.setItem('repuboost_admin_auth', newAdminPasswordInput);
-    }
-    setActiveAdminPassword(newAdminPasswordInput);
-    setIsAdminPasswordModalOpen(false);
-    setStatusFeedbackToast({
-      message: '🔑 Master Admin password updated successfully!',
-      type: 'success',
-    });
-    setTimeout(() => setStatusFeedbackToast(null), 4000);
-  };
-
-  const handleResetAdminPasswordToDefault = () => {
-    if (typeof window !== 'undefined') {
       localStorage.removeItem('repuboost_custom_admin_password');
-      sessionStorage.setItem('repuboost_admin_auth', DEFAULT_ADMIN_PASSWORD);
-      localStorage.setItem('repuboost_admin_auth', DEFAULT_ADMIN_PASSWORD);
     }
-    setActiveAdminPassword(DEFAULT_ADMIN_PASSWORD);
-    setIsAdminPasswordModalOpen(false);
-    setStatusFeedbackToast({
-      message: '🔄 Master Admin password reset to default.',
-      type: 'success',
-    });
-    setTimeout(() => setStatusFeedbackToast(null), 4000);
   };
+
+  // Initial Auth Verification against Server
+  useEffect(() => {
+    async function verifyInitialSession() {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('repuboost_custom_admin_password');
+        localStorage.removeItem('repuboost_admin_auth');
+
+        const savedKey = (sessionStorage.getItem('repuboost_admin_key') || '').trim();
+        if (savedKey) {
+          try {
+            const res = await fetch('/api/repuboost', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-admin-key': savedKey,
+              },
+              body: JSON.stringify({ action: 'verify_admin', admin_password: savedKey }),
+            });
+            const data = await res.json();
+            if (res.ok && data.authorized) {
+              setAdminKey(savedKey);
+              setIsAuthenticated(true);
+            } else {
+              sessionStorage.removeItem('repuboost_admin_key');
+              setIsAuthenticated(false);
+            }
+          } catch {
+            sessionStorage.removeItem('repuboost_admin_key');
+            setIsAuthenticated(false);
+          }
+        } else {
+          setIsAuthenticated(false);
+        }
+      }
+      setIsAuthChecking(false);
+    }
+
+    verifyInitialSession();
+  }, []);
 
   const handleUpdateStorePin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -499,6 +474,7 @@ export default function RepuBoostDashboard() {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     fetchData(false);
 
     const handleVisibilityChange = () => {
@@ -520,7 +496,7 @@ export default function RepuBoostDashboard() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isAuthenticated, adminKey]);
 
   useEffect(() => {
     if (!selectedStandClient) return;
@@ -992,7 +968,7 @@ export default function RepuBoostDashboard() {
                       Master Control
                     </p>
                     <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate">
-                      Admin: Neymar
+                      Master Administrator
                     </p>
                   </div>
 
@@ -1019,15 +995,11 @@ export default function RepuBoostDashboard() {
                     </span>
                   </button>
 
-                  {/* 2. Change Password */}
+                  {/* 2. Admin Security */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsSettingsOpen(false);
-                      setAdminPasswordChangeError(null);
-                      setCurrentAdminPasswordInput('');
-                      setNewAdminPasswordInput('');
-                      setConfirmAdminPasswordInput('');
                       setIsAdminPasswordModalOpen(true);
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl transition-colors ${
@@ -1035,7 +1007,7 @@ export default function RepuBoostDashboard() {
                     }`}
                   >
                     <KeyRound className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Change Admin Password</span>
+                    <span>Master Admin Security</span>
                   </button>
 
                   {/* 3. Test QR Demo */}
@@ -3256,10 +3228,10 @@ GRANT EXECUTE ON FUNCTION public.increment_business_metric(UUID, TEXT) TO anon, 
                 </div>
                 <div>
                   <h3 className={`font-bold text-base ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                    Change Master Admin Password
+                    Master Admin Security
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Agency Master Control • Stores have zero access
+                    Server Environment Variable • Zero Browser Leakage
                   </p>
                 </div>
               </div>
@@ -3272,99 +3244,35 @@ GRANT EXECUTE ON FUNCTION public.increment_business_metric(UUID, TEXT) TO anon, 
               </button>
             </div>
 
-            {adminPasswordChangeError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{adminPasswordChangeError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleChangeAdminPassword} className="space-y-4 font-sans text-xs">
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">
-                  Current Master Password
-                </label>
-                <input
-                  required
-                  type="password"
-                  value={currentAdminPasswordInput}
-                  onChange={(e) => setCurrentAdminPasswordInput(e.target.value)}
-                  placeholder="Enter current password (default: neymar)"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-amber-500 ${
-                    isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-700 text-white'
-                  }`}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                  <span>New Master Password</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewAdminPassword(!showNewAdminPassword)}
-                    className="text-[10px] text-amber-600 hover:underline"
-                  >
-                    {showNewAdminPassword ? 'Hide' : 'Show'}
-                  </button>
-                </label>
-                <input
-                  required
-                  type={showNewAdminPassword ? 'text' : 'password'}
-                  value={newAdminPasswordInput}
-                  onChange={(e) => setNewAdminPasswordInput(e.target.value)}
-                  placeholder="At least 6 characters"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-amber-500 ${
-                    isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-700 text-white'
-                  }`}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300">
-                  Confirm New Password
-                </label>
-                <input
-                  required
-                  type={showNewAdminPassword ? 'text' : 'password'}
-                  value={confirmAdminPasswordInput}
-                  onChange={(e) => setConfirmAdminPasswordInput(e.target.value)}
-                  placeholder="Re-enter new password"
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:border-amber-500 ${
-                    isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-slate-950 border-slate-700 text-white'
-                  }`}
-                />
-              </div>
-
-              <div className="pt-3 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={handleResetAdminPasswordToDefault}
-                  className="text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline"
-                  title="Reset password to initial default (neymar)"
-                >
-                  Reset to default
-                </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsAdminPasswordModalOpen(false)}
-                    className={`px-4 py-2 rounded-xl text-xs font-medium border transition-colors ${
-                      isLight
-                        ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
-                        : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
-                    }`}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 active:scale-95 transition-all"
-                  >
-                    Save Password
-                  </button>
+            <div className="space-y-4 font-sans text-xs">
+              <div className={`p-4 rounded-2xl border space-y-2.5 ${isLight ? 'bg-amber-50/70 border-amber-200/80 text-amber-950' : 'bg-amber-500/10 border-amber-500/20 text-slate-200'}`}>
+                <p className="font-bold flex items-center gap-2 text-amber-900 dark:text-amber-400">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>Server-Side Password Protection Active</span>
+                </p>
+                <p className="text-[11px] leading-relaxed opacity-90">
+                  Your master admin password is authenticated strictly on the server against the <code className="px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 font-mono text-[10px]">ADMIN_PASSWORD</code> environment variable. Secrets are never exposed in browser code.
+                </p>
+                <div className="pt-2 text-[11px] space-y-1.5 border-t border-amber-300/40 dark:border-amber-500/20">
+                  <p className="font-bold">To update your master password:</p>
+                  <ol className="list-decimal list-inside space-y-1 opacity-90 pl-1">
+                    <li>Open your server <code className="font-mono">.env.local</code> file (or Vercel Dashboard Settings).</li>
+                    <li>Update: <code className="font-mono text-amber-800 dark:text-amber-300">ADMIN_PASSWORD=your_new_secret</code></li>
+                    <li>Restart or redeploy. Old passwords are immediately invalidated.</li>
+                  </ol>
                 </div>
               </div>
-            </form>
+
+              <div className="pt-2 flex justify-end border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAdminPasswordModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20 active:scale-95 transition-all"
+                >
+                  Understood
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

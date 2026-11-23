@@ -19,30 +19,14 @@ import {
 } from '@/lib/feedbackStore';
 import { sendWhatsAppNotification } from '@/lib/whatsapp';
 import { SubscriptionStatus } from '@/types/repuboost';
+import { parseJsonBody, safeInternalError, isMasterAdminAuthorized, safeString } from '@/lib/apiSecurity';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, x-admin-key',
 };
-
-function isMasterAdminAuthorized(req: Request, body?: any): boolean {
-  const masterSecret =
-    process.env.ADMIN_PASSWORD ||
-    process.env.ADMIN_SECRET_KEY ||
-    process.env.NEXT_PUBLIC_ADMIN_PASSWORD ||
-    'neymar';
-
-  const headerKey = req.headers.get('x-admin-key');
-  const authHeader = req.headers.get('authorization');
-  const bearerKey = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  const bodyKey = body?.admin_key || body?.admin_password;
-
-  const provided = (headerKey || bearerKey || bodyKey || '').trim().toLowerCase();
-  const secret = masterSecret.trim().toLowerCase();
-
-  return provided === 'neymar' || provided === secret;
-}
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -159,13 +143,42 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const { data: body, error: parseErr } = await parseJsonBody(req);
+    if (parseErr || !body) {
+      return NextResponse.json(
+        { success: false, error: parseErr || 'Request body cannot be empty' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
     const { action } = body;
 
     // ------------------------------------------------------------------------
-    // ACTION: submit_feedback (Gatekeeper Protected, Publicly accessible)
+    // ACTION: verify_admin (Fast, secure endpoint for admin login screen check)
+    // ------------------------------------------------------------------------
+    if (action === 'verify_admin') {
+      const isAuth = isMasterAdminAuthorized(req, body);
+      if (isAuth) {
+        return NextResponse.json({ success: true, authorized: true }, { headers: corsHeaders });
+      }
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Invalid master admin credentials' },
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
+    // ------------------------------------------------------------------------
+    // ACTION: submit_feedback (Gatekeeper Protected, Publicly accessible with Rate Limit)
     // ------------------------------------------------------------------------
     if (action === 'submit_feedback') {
+      const clientIp = getClientIp(req);
+      const { allowed } = checkRateLimit(`fb:${clientIp}`, 15, 60);
+      if (!allowed) {
+        return NextResponse.json(
+          { error: 'Too many submissions from this connection. Please wait a moment.' },
+          { status: 429, headers: corsHeaders }
+        );
+      }
+
       const { business_slug, rating, customer_name, customer_contact, complaint_text } = body;
 
       const numRating = Number(rating);
@@ -281,9 +294,18 @@ export async function POST(req: Request) {
     }
 
     // ------------------------------------------------------------------------
-    // ACTION: track_metric (Lightweight, non-blocking real-time analytics counter)
+    // ACTION: track_metric (Lightweight, non-blocking real-time analytics counter with Rate Limit)
     // ------------------------------------------------------------------------
     if (action === 'track_metric') {
+      const clientIp = getClientIp(req);
+      const { allowed } = checkRateLimit(`metric:${clientIp}`, 60, 60);
+      if (!allowed) {
+        return NextResponse.json(
+          { success: false, error: 'Rate limit exceeded' },
+          { status: 429, headers: corsHeaders }
+        );
+      }
+
       const { business_slug, business_id, metric } = body;
       const targetIdentifier = business_id || business_slug;
 
@@ -357,9 +379,17 @@ export async function POST(req: Request) {
     // ACTION: add_client (Onboarding new shop with 7-day default trial)
     // ------------------------------------------------------------------------
     if (action === 'add_client') {
+      const cleanName = safeString(body.name, 120);
+      const cleanSlug = safeString(body.slug, 80);
+
+      if (!cleanName || !cleanSlug) {
+        return NextResponse.json(
+          { success: false, error: 'Shop Name and Slug are required.' },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
       const {
-        name,
-        slug,
         category,
         city,
         owner_name,
@@ -371,16 +401,16 @@ export async function POST(req: Request) {
       } = body;
 
       const created = await createShop({
-        name,
-        slug,
-        category,
-        city,
-        owner_name,
-        owner_phone,
-        google_review_url,
-        monthly_retainer,
+        name: cleanName,
+        slug: cleanSlug,
+        category: safeString(category, 80, 'Retail & General'),
+        city: safeString(city, 80, 'Delhi'),
+        owner_name: safeString(owner_name, 100),
+        owner_phone: safeString(owner_phone, 30),
+        google_review_url: safeString(google_review_url, 1000),
+        monthly_retainer: Number(monthly_retainer) || 899,
         subscription_status: subscription_status || 'trial',
-        payment_link,
+        payment_link: safeString(payment_link, 500),
       });
 
       return NextResponse.json({ success: true, client: created });
@@ -479,10 +509,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: 'All demo feedback records purged permanently.' });
     }
 
-    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400, headers: corsHeaders });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    console.error('[RepuBoost API POST Error]:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return safeInternalError(err, 'RepuBoost API POST', corsHeaders);
   }
 }

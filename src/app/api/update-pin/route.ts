@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyShopPortalAuth, updateShopSubscription, getShopBySlug, getShopById } from '@/lib/shopStore';
+import { parseJsonBody, safeInternalError, isMasterAdminAuthorized, safeString } from '@/lib/apiSecurity';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,28 +24,19 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    let body: any;
-    try {
-      body = await req.json();
-    } catch {
+    const { data: body, error: parseErr } = await parseJsonBody(req);
+    if (parseErr || !body) {
       return NextResponse.json(
-        { success: false, error: 'Invalid JSON request payload' },
+        { success: false, error: parseErr || 'Request body cannot be empty' },
         { status: 400, headers: corsHeaders }
       );
     }
 
-    if (!body || typeof body !== 'object') {
-      return NextResponse.json(
-        { success: false, error: 'Request body must be a valid JSON object' },
-        { status: 400, headers: corsHeaders }
-      );
-    }
-
-    const { shop_id, slug, shop_slug, current_pin, new_pin, admin_key } = body;
-    const targetSlug = slug || shop_slug;
+    const { shop_id, slug, shop_slug, current_pin, new_pin } = body;
+    const targetSlug = safeString(slug || shop_slug, 80);
 
     // 1. PIN Format & Strength Validation (4 to 12 alphanumeric characters)
-    if (!new_pin || typeof new_pin !== 'string' && typeof new_pin !== 'number') {
+    if (!new_pin || (typeof new_pin !== 'string' && typeof new_pin !== 'number')) {
       return NextResponse.json(
         { success: false, error: 'Missing new_pin parameter' },
         { status: 400, headers: corsHeaders }
@@ -62,20 +54,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Authorization Check (Either Master Admin or Authenticated Shop Tenant)
-    const masterSecret =
-      process.env.ADMIN_PASSWORD ||
-      process.env.ADMIN_SECRET_KEY ||
-      process.env.NEXT_PUBLIC_ADMIN_PASSWORD ||
-      'neymar';
-
-    const headerAdminKey = req.headers.get('x-admin-key');
-    const authHeader = req.headers.get('authorization');
-    const bearerKey = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const effectiveAdminKey = (admin_key || headerAdminKey || bearerKey || '').trim().toLowerCase();
-    const secret = masterSecret.trim().toLowerCase();
-
-    const isAdminAuthorized = effectiveAdminKey === 'neymar' || effectiveAdminKey === secret;
+    // 2. Authorization Check: Either Master Admin or Authenticated Shop Tenant
+    const isAdminAuthorized = isMasterAdminAuthorized(req, body);
 
     let targetShop = null;
 
@@ -148,10 +128,6 @@ export async function POST(req: Request) {
       { headers: corsHeaders }
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Server error';
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500, headers: corsHeaders }
-    );
+    return safeInternalError(err, 'Update PIN POST', corsHeaders);
   }
 }
