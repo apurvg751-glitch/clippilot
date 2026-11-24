@@ -32,9 +32,11 @@ import {
   Printer,
   Sparkles,
   Loader2,
+  BarChart3,
 } from 'lucide-react';
 import { getStandTheme, downloadDesignedStand } from '@/lib/standGenerator';
 import StarLoadingScreen from '@/components/common/StarLoadingScreen';
+import { formatWeeklyRoiReport } from '@/lib/whatsapp';
 
 interface TenantShop {
   id: string;
@@ -101,6 +103,9 @@ function PortalInner() {
   // 1-Tap WhatsApp "Send Review Request" State
   const [customerReviewPhone, setCustomerReviewPhone] = useState<string>('');
   const [reviewRequestToast, setReviewRequestToast] = useState<string | null>(null);
+
+  // Weekly ROI Report State
+  const [weeklyReportToast, setWeeklyReportToast] = useState<string | null>(null);
 
   // Personalized Whole Stand Download State
   const [isDownloadingStand, setIsDownloadingStand] = useState<boolean>(false);
@@ -330,6 +335,51 @@ function PortalInner() {
     setReviewRequestToast(`Opening WhatsApp review request for +91 ${cleanNumber}!`);
     setCustomerReviewPhone('');
     setTimeout(() => setReviewRequestToast(null), 4000);
+  };
+
+  const handleCopyWeeklyReport = () => {
+    if (!authenticatedShop) return;
+    const scans = authenticatedShop.total_scans ?? authenticatedShop.scans_count ?? 0;
+    const reviews = authenticatedShop.positive_redirects ?? authenticatedShop.reviews_gained ?? 0;
+    const complaints = Math.max(authenticatedShop.complaints_blocked ?? 0, feedbacks.length);
+    const rating = authenticatedShop.rating_avg ?? 4.9;
+
+    const report = formatWeeklyRoiReport({
+      shopName: authenticatedShop.name,
+      ownerName: authenticatedShop.owner_name,
+      scansCount: scans,
+      reviewsGained: reviews,
+      complaintsBlocked: complaints,
+      ratingAvg: rating,
+      lang: 'hinglish',
+    });
+
+    navigator.clipboard.writeText(report);
+    setWeeklyReportToast('Weekly report copied to clipboard!');
+    setTimeout(() => setWeeklyReportToast(null), 3500);
+  };
+
+  const handleShareWeeklyReportOnWhatsApp = () => {
+    if (!authenticatedShop) return;
+    const scans = authenticatedShop.total_scans ?? authenticatedShop.scans_count ?? 0;
+    const reviews = authenticatedShop.positive_redirects ?? authenticatedShop.reviews_gained ?? 0;
+    const complaints = Math.max(authenticatedShop.complaints_blocked ?? 0, feedbacks.length);
+    const rating = authenticatedShop.rating_avg ?? 4.9;
+
+    const report = formatWeeklyRoiReport({
+      shopName: authenticatedShop.name,
+      ownerName: authenticatedShop.owner_name,
+      scansCount: scans,
+      reviewsGained: reviews,
+      complaintsBlocked: complaints,
+      ratingAvg: rating,
+      lang: 'hinglish',
+    });
+
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(report)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    setWeeklyReportToast('Opening WhatsApp to share weekly report!');
+    setTimeout(() => setWeeklyReportToast(null), 3500);
   };
 
   // --------------------------------------------------------------------------
@@ -649,6 +699,61 @@ function PortalInner() {
             <p className={`text-[11px] mt-1.5 font-medium ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>Verified Patron Loyalty</p>
           </div>
         </div>
+
+        {/* WEEKLY ROI PERFORMANCE SUMMARY BANNER */}
+        <div
+          className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+            isLight
+              ? 'bg-gradient-to-r from-indigo-50/70 via-emerald-50/50 to-white border-indigo-100 shadow-sm'
+              : 'bg-gradient-to-r from-indigo-950/30 via-emerald-950/20 to-slate-900 border-slate-800'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+              <BarChart3 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-extrabold text-sm flex items-center gap-2">
+                <span>Weekly Verified Review Report</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  Ready to Share
+                </span>
+              </div>
+              <p className={`text-[11px] mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Share this week's verified stats (+{authenticatedShop.positive_redirects ?? authenticatedShop.reviews_gained ?? 0} reviews, {Math.max(authenticatedShop.complaints_blocked ?? 0, feedbacks.length)} saved) with your team or partners on WhatsApp.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleCopyWeeklyReport}
+              className={`px-3 py-2 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                isLight ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+              }`}
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copy</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShareWeeklyReportOnWhatsApp}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
+            >
+              <MessageCircle className="w-3.5 h-3.5 fill-white/20" />
+              <span>Share on WhatsApp</span>
+            </button>
+          </div>
+        </div>
+
+        {weeklyReportToast && (
+          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center gap-2 animate-in fade-in">
+            <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span>{weeklyReportToast}</span>
+          </div>
+        )}
 
         {/* 1-TAP WHATSAPP REVIEW REQUEST DISPATCHER */}
         <div

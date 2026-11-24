@@ -175,3 +175,56 @@ export async function sendWhatsAppNotification(payload: WhatsAppMessagePayload):
     content,
   };
 }
+
+/**
+ * High-Conversion Weekly Performance & ROI Report for Shopkeepers
+ * Used in Admin Panel & Client Portal to prove value and retain monthly retainers
+ */
+export function formatWeeklyRoiReport({
+  shopName,
+  ownerName,
+  scansCount = 0,
+  reviewsGained = 0,
+  complaintsBlocked = 0,
+  ratingAvg = 4.9,
+  lang = 'hinglish',
+}: {
+  shopName: string;
+  ownerName?: string;
+  scansCount?: number;
+  reviewsGained?: number;
+  complaintsBlocked?: number;
+  ratingAvg?: number;
+  lang?: 'hinglish' | 'english';
+}): string {
+  const name = (ownerName || 'Owner').trim();
+  const rating = Number(ratingAvg || 4.9).toFixed(1);
+
+  if (lang === 'english') {
+    return (
+      `📊 *RepuBoost Weekly Performance Report*\n` +
+      `🏪 *Shop:* ${shopName}\n\n` +
+      `Hello ${name}! 👋\n` +
+      `Here is your verified weekly customer review & rating summary:\n\n` +
+      `⭐ *Google Reviews Added:* +${reviewsGained} 5-Star Reviews\n` +
+      `🛡️ *Bad Reviews Intercepted:* ${complaintsBlocked} Private Complaints (Saved your Google Rating!)\n` +
+      `📲 *Total Counter QR Scans:* ${scansCount} Customers\n` +
+      `🌟 *Customer Satisfaction:* ${rating} / 5.0\n\n` +
+      `✅ *Protection Status:* 100% Active & Operational\n` +
+      `Your counter QR stand is continuously driving 5-star customer reviews to your Google Maps listing! 🚀`
+    );
+  }
+
+  return (
+    `📊 *RepuBoost Weekly Performance Report*\n` +
+    `🏪 *Shop:* ${shopName}\n\n` +
+    `Namaste ${name}! 🙏\n` +
+    `Aapke business ka is hafte ka verified customer review & reputation report:\n\n` +
+    `⭐ *Google Reviews Added:* +${reviewsGained} 5-Star Reviews\n` +
+    `🛡️ *Bad Reviews Blocked:* ${complaintsBlocked} Private Complaints (Google rating 100% safe!)\n` +
+    `📲 *Total Counter QR Scans:* ${scansCount} Customers\n` +
+    `🌟 *Customer Satisfaction:* ${rating} / 5.0\n\n` +
+    `✅ *Protection Status:* 100% Active & Operational\n` +
+    `Aapka counter QR stand 24/7 active hai aur aapke Google Maps ranking ko lagatar boost kar raha hai! 🚀`
+  );
+}

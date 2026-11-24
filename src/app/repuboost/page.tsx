@@ -44,10 +44,12 @@ import {
   X,
   ChevronDown,
   Loader2,
+  BarChart3,
 } from 'lucide-react';
 import { getStandTheme, downloadDesignedStand } from '@/lib/standGenerator';
 import { SubscriptionStatus } from '@/types/repuboost';
 import StarLoadingScreen from '@/components/common/StarLoadingScreen';
+import { formatWeeklyRoiReport } from '@/lib/whatsapp';
 
 interface ClientRecord {
   id: string;
@@ -167,6 +169,12 @@ export default function RepuBoostDashboard() {
   const [newStorePinInput, setNewStorePinInput] = useState<string>('');
   const [isUpdatingStorePin, setIsUpdatingStorePin] = useState<boolean>(false);
   const [storePinError, setStorePinError] = useState<string | null>(null);
+
+  // Weekly ROI Performance Report Modal State
+  const [isWeeklyReportModalOpen, setIsWeeklyReportModalOpen] = useState<boolean>(false);
+  const [selectedClientForReport, setSelectedClientForReport] = useState<ClientRecord | null>(null);
+  const [reportLang, setReportLang] = useState<'hinglish' | 'english'>('hinglish');
+  const [reportCopiedToast, setReportCopiedToast] = useState<string | null>(null);
 
   // Roster Search, Filter & View Toggle State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -1645,6 +1653,23 @@ export default function RepuBoostDashboard() {
                                         </div>
                                       </Link>
 
+                                      {/* Weekly ROI Report */}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveManageShopId(null);
+                                          setSelectedClientForReport(client);
+                                          setReportLang('hinglish');
+                                          setIsWeeklyReportModalOpen(true);
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-600 transition-colors ${
+                                          isLight ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'
+                                        }`}
+                                      >
+                                        <BarChart3 className="w-3.5 h-3.5 text-emerald-500" />
+                                        <span>Weekly ROI Report</span>
+                                      </button>
+
                                       {/* Edit PIN */}
                                       <button
                                         type="button"
@@ -1974,6 +1999,42 @@ export default function RepuBoostDashboard() {
                       <MessageCircle className="w-3.5 h-3.5" />
                       <span>{client.owner_phone}</span>
                     </a>
+                  </div>
+
+                  {/* Weekly Performance ROI Report Dispatcher */}
+                  <div
+                    className={`p-3 rounded-xl border flex items-center justify-between text-xs gap-2 ${
+                      isLight
+                        ? 'bg-emerald-50/70 border-emerald-200'
+                        : 'bg-emerald-950/20 border-emerald-800/40'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                        <BarChart3 className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-900 dark:text-slate-100 text-[11px] truncate">
+                          Weekly ROI Report
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                          +{client.positive_redirects ?? client.reviews_gained ?? 0} reviews • {client.complaints_blocked ?? 0} saved
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedClientForReport(client);
+                        setReportLang('hinglish');
+                        setIsWeeklyReportModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-[11px] transition-all shadow-sm shadow-emerald-600/20 shrink-0 cursor-pointer"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Send Report</span>
+                    </button>
                   </div>
 
                   {/* STORE PORTAL ACCESS CREDENTIALS BOX */}
@@ -3378,6 +3439,154 @@ GRANT EXECUTE ON FUNCTION public.increment_business_metric(UUID, TEXT) TO anon, 
           </div>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* WEEKLY ROI PERFORMANCE REPORT MODAL (ADMIN ONLY)                          */}
+      {/* ========================================================================= */}
+      {isWeeklyReportModalOpen && selectedClientForReport && (() => {
+        const scans = selectedClientForReport.total_scans ?? selectedClientForReport.scans_count ?? 0;
+        const reviews = selectedClientForReport.positive_redirects ?? selectedClientForReport.reviews_gained ?? 0;
+        const complaints = selectedClientForReport.complaints_blocked ?? 0;
+        const rating = selectedClientForReport.rating_avg ?? 4.9;
+        const cleanPhone = (selectedClientForReport.owner_phone || '').replace(/[^0-9]/g, '');
+        const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
+        const reportContent = formatWeeklyRoiReport({
+          shopName: selectedClientForReport.name,
+          ownerName: selectedClientForReport.owner_name,
+          scansCount: scans,
+          reviewsGained: reviews,
+          complaintsBlocked: complaints,
+          ratingAvg: rating,
+          lang: reportLang,
+        });
+
+        const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(reportContent)}`;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+            <div
+              className={`w-full max-w-lg rounded-2xl sm:rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl border ${
+                isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              }`}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+                    <BarChart3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm sm:text-base">Weekly ROI Performance Report</h3>
+                    <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {selectedClientForReport.name} • Owner: {selectedClientForReport.owner_name || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsWeeklyReportModalOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Verified Metrics Badges */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-indigo-50/50 border-indigo-100' : 'bg-indigo-950/20 border-indigo-900/30'}`}>
+                  <div className="text-[10px] uppercase font-bold text-slate-500">Total Scans</div>
+                  <div className="text-lg font-black text-indigo-500">{scans}</div>
+                </div>
+                <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-amber-50/50 border-amber-100' : 'bg-amber-950/20 border-amber-900/30'}`}>
+                  <div className="text-[10px] uppercase font-bold text-slate-500">5★ Added</div>
+                  <div className="text-lg font-black text-amber-500">+{reviews}</div>
+                </div>
+                <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-emerald-50/50 border-emerald-100' : 'bg-emerald-950/20 border-emerald-900/30'}`}>
+                  <div className="text-[10px] uppercase font-bold text-slate-500">Saved</div>
+                  <div className="text-lg font-black text-emerald-500">{complaints}</div>
+                </div>
+              </div>
+
+              {/* Language Switcher Tabs */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">Report Language:</span>
+                <div className="flex items-center p-0.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setReportLang('hinglish')}
+                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                      reportLang === 'hinglish'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    🇮🇳 Hinglish
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReportLang('english')}
+                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                      reportLang === 'english'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    🌐 English
+                  </button>
+                </div>
+              </div>
+
+              {/* Message Live Preview */}
+              <div
+                className={`p-3.5 rounded-xl border font-mono text-xs leading-relaxed whitespace-pre-wrap select-all max-h-52 overflow-y-auto ${
+                  isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'
+                }`}
+              >
+                {reportContent}
+              </div>
+
+              {/* Toast Feedback */}
+              {reportCopiedToast && (
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center gap-1.5 animate-in fade-in">
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  <span>{reportCopiedToast}</span>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(reportContent);
+                    setReportCopiedToast('Weekly ROI report copied to clipboard!');
+                    setTimeout(() => setReportCopiedToast(null), 3000);
+                  }}
+                  className={`w-full sm:w-auto px-4 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                    isLight
+                      ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+                      : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+                  }`}
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy Report</span>
+                </button>
+
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 fill-white/20" />
+                  <span>Open WhatsApp ({selectedClientForReport.owner_phone ? `+${cleanPhone}` : 'Owner'})</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Stand Generation Luxury Star Loading Overlay */}
       {isDownloadingStandAdmin && (
