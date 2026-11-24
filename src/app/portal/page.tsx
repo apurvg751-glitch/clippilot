@@ -33,6 +33,7 @@ import {
   Sparkles,
   Loader2,
   BarChart3,
+  X,
 } from 'lucide-react';
 import { getStandTheme, downloadDesignedStand } from '@/lib/standGenerator';
 import StarLoadingScreen from '@/components/common/StarLoadingScreen';
@@ -106,6 +107,8 @@ function PortalInner() {
 
   // Weekly ROI Report State
   const [weeklyReportToast, setWeeklyReportToast] = useState<string | null>(null);
+  const [isViewReportModalOpen, setIsViewReportModalOpen] = useState<boolean>(false);
+  const [portalReportLang, setPortalReportLang] = useState<'hinglish' | 'english'>('hinglish');
 
   // Personalized Whole Stand Download State
   const [isDownloadingStand, setIsDownloadingStand] = useState<boolean>(false);
@@ -337,7 +340,7 @@ function PortalInner() {
     setTimeout(() => setReviewRequestToast(null), 4000);
   };
 
-  const handleCopyWeeklyReport = () => {
+  const handleCopyWeeklyReport = (lang: 'hinglish' | 'english' = portalReportLang) => {
     if (!authenticatedShop) return;
     const scans = authenticatedShop.total_scans ?? authenticatedShop.scans_count ?? 0;
     const reviews = authenticatedShop.positive_redirects ?? authenticatedShop.reviews_gained ?? 0;
@@ -351,34 +354,11 @@ function PortalInner() {
       reviewsGained: reviews,
       complaintsBlocked: complaints,
       ratingAvg: rating,
-      lang: 'hinglish',
+      lang: lang,
     });
 
     navigator.clipboard.writeText(report);
     setWeeklyReportToast('Weekly report copied to clipboard!');
-    setTimeout(() => setWeeklyReportToast(null), 3500);
-  };
-
-  const handleShareWeeklyReportOnWhatsApp = () => {
-    if (!authenticatedShop) return;
-    const scans = authenticatedShop.total_scans ?? authenticatedShop.scans_count ?? 0;
-    const reviews = authenticatedShop.positive_redirects ?? authenticatedShop.reviews_gained ?? 0;
-    const complaints = Math.max(authenticatedShop.complaints_blocked ?? 0, feedbacks.length);
-    const rating = authenticatedShop.rating_avg ?? 4.9;
-
-    const report = formatWeeklyRoiReport({
-      shopName: authenticatedShop.name,
-      ownerName: authenticatedShop.owner_name,
-      scansCount: scans,
-      reviewsGained: reviews,
-      complaintsBlocked: complaints,
-      ratingAvg: rating,
-      lang: 'hinglish',
-    });
-
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(report)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
-    setWeeklyReportToast('Opening WhatsApp to share weekly report!');
     setTimeout(() => setWeeklyReportToast(null), 3500);
   };
 
@@ -700,7 +680,7 @@ function PortalInner() {
           </div>
         </div>
 
-        {/* WEEKLY ROI PERFORMANCE SUMMARY BANNER */}
+        {/* WEEKLY ROI PERFORMANCE SUMMARY BANNER (SHOP PANEL VIEW) */}
         <div
           className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
             isLight
@@ -716,11 +696,11 @@ function PortalInner() {
               <div className="font-extrabold text-sm flex items-center gap-2">
                 <span>Weekly Verified Review Report</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                  Ready to Share
+                  Performance Summary
                 </span>
               </div>
               <p className={`text-[11px] mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Share this week's verified stats (+{authenticatedShop.positive_redirects ?? authenticatedShop.reviews_gained ?? 0} reviews, {Math.max(authenticatedShop.complaints_blocked ?? 0, feedbacks.length)} saved) with your team or partners on WhatsApp.
+                +{authenticatedShop.positive_redirects ?? authenticatedShop.reviews_gained ?? 0} reviews added to Google • {Math.max(authenticatedShop.complaints_blocked ?? 0, feedbacks.length)} private complaints saved this week.
               </p>
             </div>
           </div>
@@ -728,22 +708,22 @@ function PortalInner() {
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={handleCopyWeeklyReport}
-              className={`px-3 py-2 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
-                isLight ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
-              }`}
+              onClick={() => setIsViewReportModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
             >
-              <Copy className="w-3.5 h-3.5" />
-              <span>Copy</span>
+              <Eye className="w-3.5 h-3.5" />
+              <span>See Report</span>
             </button>
 
             <button
               type="button"
-              onClick={handleShareWeeklyReportOnWhatsApp}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
+              onClick={() => handleCopyWeeklyReport(portalReportLang)}
+              className={`px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 ${
+                isLight ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+              }`}
             >
-              <MessageCircle className="w-3.5 h-3.5 fill-white/20" />
-              <span>Share on WhatsApp</span>
+              <Copy className="w-3.5 h-3.5" />
+              <span>Copy Report</span>
             </button>
           </div>
         </div>
@@ -1501,6 +1481,137 @@ function PortalInner() {
           </div>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* SHOPKEEPER VIEW REPORT MODAL                                              */}
+      {/* ========================================================================= */}
+      {isViewReportModalOpen && authenticatedShop && (() => {
+        const scans = authenticatedShop.total_scans ?? authenticatedShop.scans_count ?? 0;
+        const reviews = authenticatedShop.positive_redirects ?? authenticatedShop.reviews_gained ?? 0;
+        const complaints = Math.max(authenticatedShop.complaints_blocked ?? 0, feedbacks.length);
+        const rating = authenticatedShop.rating_avg ?? 4.9;
+
+        const reportContent = formatWeeklyRoiReport({
+          shopName: authenticatedShop.name,
+          ownerName: authenticatedShop.owner_name,
+          scansCount: scans,
+          reviewsGained: reviews,
+          complaintsBlocked: complaints,
+          ratingAvg: rating,
+          lang: portalReportLang,
+        });
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+            <div
+              className={`w-full max-w-lg rounded-2xl sm:rounded-3xl p-5 sm:p-7 space-y-4 shadow-2xl border ${
+                isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
+              }`}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+                    <BarChart3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm sm:text-base">Weekly Performance Report</h3>
+                    <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {authenticatedShop.name} • Verified Review Summary
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsViewReportModalOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Metrics Highlights */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-indigo-50/50 border-indigo-100' : 'bg-indigo-950/20 border-indigo-900/30'}`}>
+                  <div className="text-[10px] uppercase font-bold text-slate-500">Total Scans</div>
+                  <div className="text-lg font-black text-indigo-500">{scans}</div>
+                </div>
+                <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-amber-50/50 border-amber-100' : 'bg-amber-950/20 border-amber-900/30'}`}>
+                  <div className="text-[10px] uppercase font-bold text-slate-500">5★ Added</div>
+                  <div className="text-lg font-black text-amber-500">+{reviews}</div>
+                </div>
+                <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-emerald-50/50 border-emerald-100' : 'bg-emerald-950/20 border-emerald-900/30'}`}>
+                  <div className="text-[10px] uppercase font-bold text-slate-500">Saved</div>
+                  <div className="text-lg font-black text-emerald-500">{complaints}</div>
+                </div>
+              </div>
+
+              {/* Language Switcher */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400">View In:</span>
+                <div className="flex items-center p-0.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPortalReportLang('hinglish')}
+                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                      portalReportLang === 'hinglish'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    🇮🇳 Hinglish
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPortalReportLang('english')}
+                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                      portalReportLang === 'english'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    🌐 English
+                  </button>
+                </div>
+              </div>
+
+              {/* Message Live Preview */}
+              <div
+                className={`p-3.5 rounded-xl border font-mono text-xs leading-relaxed whitespace-pre-wrap select-all max-h-56 overflow-y-auto ${
+                  isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950 border-slate-800 text-slate-200'
+                }`}
+              >
+                {reportContent}
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsViewReportModalOpen(false)}
+                  className={`px-4 py-2 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+                    isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700' : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+                  }`}
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCopyWeeklyReport(portalReportLang);
+                    setIsViewReportModalOpen(false);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy Report</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Stand Generation Luxury Star Loading Overlay */}
       {isDownloadingStand && (
